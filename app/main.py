@@ -21,7 +21,7 @@ from app.db import (
     get_session,
     init_db,
 )
-from app.schemas import ReferralFeatures
+from app.schemas import ReferralFeatures, TriageVerdict
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("scoped.api")
@@ -237,6 +237,63 @@ def escalate_verdict(referral_id: str, verdict_id: str, body: EscalateRequest) -
 # ---------------------------------------------------------------------------
 # PA packets
 # ---------------------------------------------------------------------------
+
+
+class DraftPacketRequest(BaseModel):
+    referral_id: str
+    verdict_id: str
+
+
+@app.post("/pa-packets")
+def draft_pa_packet(body: DraftPacketRequest) -> dict:
+    """Build order step 6: PA packet with source refs.
+
+    Only drafts against an already-approved verdict — prior auth exists to
+    support a booking a nurse has signed off on, not a raw machine verdict.
+    """
+    from uuid import uuid4
+
+    from services.priorauth.draft import draft_packet
+
+    session = get_session()
+    try:
+        ref = session.get(ReferralRecord, body.referral_id)
+        if not ref:
+            raise HTTPException(404, "referral not found")
+        verdict = session.get(TriageVerdictRecord, body.verdict_id)
+        if not verdict or verdict.referral_id != body.referral_id:
+            raise HTTPException(404, "verdict not found")
+        if not verdict.approved_by:
+            raise HTTPException(409, "verdict must be nurse-approved before drafting a PA packet")
+
+        features = ReferralFeatures.model_validate_json(ref.features_json)
+        tv = TriageVerdict(
+            referral_id=verdict.referral_id,
+            urgency=verdict.urgency,
+            disposition=verdict.disposition,
+            rules_fired=verdict.rules_fired,
+            rule_version=verdict.rule_version,
+            missing_features=verdict.missing_features,
+            created_at=verdict.created_at,
+        )
+        sentences, dropped = draft_packet(features, tv)
+        if dropped:
+            log.warning("pa_packet_dropped_sentences", extra={"referral_id": body.referral_id, "dropped": dropped})
+
+        import json as _json
+
+        packet = PAPacketRecord(
+            id=str(uuid4()),
+            referral_id=body.referral_id,
+            verdict_id=body.verdict_id,
+            sentences_json=_json.dumps([s.model_dump() for s in sentences]),
+            status="drafted",
+        )
+        session.add(packet)
+        session.commit()
+        return get_pa_packet(packet.id)
+    finally:
+        session.close()
 
 
 @app.get("/pa-packets/{packet_id}")

@@ -79,3 +79,16 @@ class RuleMatch(BaseModel):
     id: str
     urgency: Urgency
     rationale: str | None = None
+
+
+class PASentence(BaseModel):
+    """One sentence in a generated PA packet.
+
+    Invariant #5: every clinical claim traces to a source. A sentence with
+    no source_ref must never render — see services/priorauth/draft.py,
+    which drops any candidate sentence lacking one before it reaches here.
+    """
+
+    text: str
+    source_ref: str
+    field: str | None = None
