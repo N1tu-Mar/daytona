@@ -1,0 +1,23 @@
+# Keep CLI uploads small — none of this is needed to build the frontend
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.hypothesis/
+*.db
+.env
+.env.local
+
+# Python backend + tooling (frontend deploy only)
+app/
+services/
+evals/
+tests/
+data/
+requirements.txt
+pyproject.toml
+
+# Build artifacts / deps (Vercel installs its own)
+node_modules/
+apps/web/node_modules/
+apps/web/.next/
