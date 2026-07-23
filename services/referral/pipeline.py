@@ -54,35 +54,42 @@ def process_referral(
     """
     referral_id = str(uuid4())
 
+    # No sandbox provenance yet: if parsing fails before a box runs, these stay
+    # empty and no sandbox badge shows for the resulting ESCALATE item.
+    sb: dict = {"sandbox_id": None, "sandbox_ms": None, "sandboxed": False}
+
     try:
-        raw_text = parse_document_in_sandbox(content, filename)
+        parse = parse_document_in_sandbox(content, filename)
     except SandboxError as e:
-        return _persist(referral_id, source, "", patient_name, ReferralFeatures(), _escalate_verdict(referral_id, f"sandbox_error: {e}"))
+        return _persist(referral_id, source, "", patient_name, ReferralFeatures(), _escalate_verdict(referral_id, f"sandbox_error: {e}"), **sb)
     except Exception as e:
         log.exception("unexpected_sandbox_failure")
-        return _persist(referral_id, source, "", patient_name, ReferralFeatures(), _escalate_verdict(referral_id, f"unexpected_sandbox_failure: {e}"))
+        return _persist(referral_id, source, "", patient_name, ReferralFeatures(), _escalate_verdict(referral_id, f"unexpected_sandbox_failure: {e}"), **sb)
+
+    raw_text = parse.text
+    sb = {"sandbox_id": parse.sandbox_id, "sandbox_ms": parse.duration_ms, "sandboxed": parse.sandboxed}
 
     if not raw_text.strip():
-        return _persist(referral_id, source, raw_text, patient_name, ReferralFeatures(), _escalate_verdict(referral_id, "document_unparseable_empty_text"))
+        return _persist(referral_id, source, raw_text, patient_name, ReferralFeatures(), _escalate_verdict(referral_id, "document_unparseable_empty_text"), **sb)
 
     try:
         features = extract_features(raw_text)
     except ExtractionError as e:
-        return _persist(referral_id, source, raw_text, patient_name, ReferralFeatures(), _escalate_verdict(referral_id, f"extraction_error: {e}"))
+        return _persist(referral_id, source, raw_text, patient_name, ReferralFeatures(), _escalate_verdict(referral_id, f"extraction_error: {e}"), **sb)
     except Exception as e:
         log.exception("unexpected_extraction_failure")
-        return _persist(referral_id, source, raw_text, patient_name, ReferralFeatures(), _escalate_verdict(referral_id, f"unexpected_extraction_failure: {e}"))
+        return _persist(referral_id, source, raw_text, patient_name, ReferralFeatures(), _escalate_verdict(referral_id, f"unexpected_extraction_failure: {e}"), **sb)
 
     if any(v < LOW_CONFIDENCE_THRESHOLD for v in features.extraction_confidence.values()):
-        return _persist(referral_id, source, raw_text, patient_name, features, _escalate_verdict(referral_id, "low_extraction_confidence"))
+        return _persist(referral_id, source, raw_text, patient_name, features, _escalate_verdict(referral_id, "low_extraction_confidence"), **sb)
 
     try:
         verdict = evaluate(features, referral_id=referral_id)
     except Exception as e:
         log.exception("unexpected_rule_engine_failure")
-        return _persist(referral_id, source, raw_text, patient_name, features, _escalate_verdict(referral_id, f"unexpected_rule_engine_failure: {e}"))
+        return _persist(referral_id, source, raw_text, patient_name, features, _escalate_verdict(referral_id, f"unexpected_rule_engine_failure: {e}"), **sb)
 
-    return _persist(referral_id, source, raw_text, patient_name, features, verdict)
+    return _persist(referral_id, source, raw_text, patient_name, features, verdict, **sb)
 
 
 LOW_CONFIDENCE_THRESHOLD = 0.5
@@ -95,6 +102,9 @@ def _persist(
     patient_name: str,
     features: ReferralFeatures,
     verdict: TriageVerdict,
+    sandbox_id: str | None = None,
+    sandbox_ms: int | None = None,
+    sandboxed: bool = False,
 ) -> tuple[ReferralRecord, TriageVerdict]:
     session = get_session()
     try:
@@ -104,6 +114,9 @@ def _persist(
             raw_text=raw_text,
             patient_name=patient_name,
             features_json=features.model_dump_json(),
+            sandbox_id=sandbox_id,
+            sandbox_ms=sandbox_ms,
+            sandboxed=sandboxed,
         )
         session.add(record)
         session.add(
