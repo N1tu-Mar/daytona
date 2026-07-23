@@ -1,0 +1,351 @@
+[
+  {
+    "id": "demo-42yo-bleeding",
+    "patient_name": "Synthetic Patient A",
+    "source": "fax_scan",
+    "raw_text": "REFERRAL \u2014 GI CLINIC\nPatient: 42 y/o male.\nHx: 3 weeks intermittent rectal bleeding, bright red, noted change in bowel habit (looser stools) over same period. PCP note: 'probable hemorrhoids, reassured patient.' No prior colonoscopy.\nRequesting: routine GI opinion.",
+    "expected_urgency": "urgent",
+    "expected_disposition": "BOOK",
+    "expected_rules": [
+      "YOUNG_BLEEDING_PLUS_FEATURE"
+    ],
+    "note": "THE DEMO CASE. PCP wrote it off as hemorrhoids; system must still flag urgent.",
+    "features": {
+      "age": 42,
+      "rectal_bleeding": true,
+      "bleeding_duration_weeks": 3,
+      "change_in_bowel_habit": true,
+      "bowel_habit_duration_weeks": 3,
+      "unintentional_weight_loss": false,
+      "abdominal_pain": false,
+      "iron_deficiency_anemia": false,
+      "fit_result": "not_done",
+      "family_history_crc": "none",
+      "abdominal_or_rectal_mass": false,
+      "prior_colonoscopy_date": null
+    }
+  },
+  {
+    "id": "elderly-ida",
+    "patient_name": "Synthetic Patient B",
+    "source": "fax_scan",
+    "raw_text": "REFERRAL \u2014 GI CLINIC\nPatient: 68 y/o female.\nLabs: Hgb 9.8, MCV 72 \u2014 consistent with iron deficiency anemia, confirmed on ferritin. No GI symptoms reported. Referred for colonoscopy per anemia workup.",
+    "expected_urgency": "urgent",
+    "expected_disposition": "BOOK",
+    "expected_rules": [
+      "IDA_OVER_60"
+    ],
+    "features": {
+      "age": 68,
+      "rectal_bleeding": false,
+      "change_in_bowel_habit": false,
+      "unintentional_weight_loss": false,
+      "abdominal_pain": false,
+      "iron_deficiency_anemia": true,
+      "fit_result": "not_done",
+      "family_history_crc": "none",
+      "abdominal_or_rectal_mass": false,
+      "prior_colonoscopy_date": null
+    }
+  },
+  {
+    "id": "clean-screening",
+    "patient_name": "Synthetic Patient C",
+    "source": "fax_scan",
+    "raw_text": "REFERRAL \u2014 GI CLINIC\nPatient: 51 y/o male, asymptomatic. No bleeding, no bowel habit change, no weight loss, no pain, no anemia. FIT negative last year. Never had colonoscopy. Requesting routine screening per age.",
+    "expected_urgency": "routine",
+    "expected_disposition": "BOOK",
+    "expected_rules": [
+      "SCREENING_AGE_NO_PRIOR"
+    ],
+    "features": {
+      "age": 51,
+      "rectal_bleeding": false,
+      "change_in_bowel_habit": false,
+      "unintentional_weight_loss": false,
+      "abdominal_pain": false,
+      "iron_deficiency_anemia": false,
+      "fit_result": "negative",
+      "family_history_crc": "none",
+      "abdominal_or_rectal_mass": false,
+      "prior_colonoscopy_date": null
+    }
+  },
+  {
+    "id": "positive-fit",
+    "patient_name": "Synthetic Patient D",
+    "source": "fax_scan",
+    "raw_text": "REFERRAL \u2014 GI CLINIC\nPatient: 55 y/o. Positive FIT via national screening program. No symptoms reported. Requesting diagnostic colonoscopy per protocol.",
+    "expected_urgency": "urgent",
+    "expected_disposition": "BOOK",
+    "expected_rules": [
+      "POSITIVE_FIT"
+    ],
+    "features": {
+      "age": 55,
+      "fit_result": "positive",
+      "rectal_bleeding": false,
+      "change_in_bowel_habit": false,
+      "unintentional_weight_loss": false,
+      "abdominal_pain": false,
+      "iron_deficiency_anemia": false,
+      "family_history_crc": "none",
+      "abdominal_or_rectal_mass": false,
+      "prior_colonoscopy_date": null
+    }
+  },
+  {
+    "id": "palpable-mass",
+    "patient_name": "Synthetic Patient E",
+    "source": "fax_scan",
+    "raw_text": "REFERRAL \u2014 GI CLINIC\nPatient: 39 y/o. On exam, palpable mass noted in right lower quadrant. Referred urgently.",
+    "expected_urgency": "urgent",
+    "expected_disposition": "BOOK",
+    "expected_rules": [
+      "MASS_ON_EXAM"
+    ],
+    "features": {
+      "age": 39,
+      "abdominal_or_rectal_mass": true,
+      "rectal_bleeding": false,
+      "change_in_bowel_habit": false,
+      "unintentional_weight_loss": false,
+      "abdominal_pain": true,
+      "iron_deficiency_anemia": false,
+      "fit_result": "not_done",
+      "family_history_crc": "none",
+      "prior_colonoscopy_date": null
+    }
+  },
+  {
+    "id": "young-isolated-bleeding",
+    "patient_name": "Synthetic Patient F",
+    "source": "fax_scan",
+    "raw_text": "REFERRAL \u2014 GI CLINIC\nPatient: 29 y/o. Reports occasional rectal bleeding x 1 week, otherwise well, no other symptoms. No prior GI history.",
+    "expected_urgency": "soon",
+    "expected_disposition": "BOOK",
+    "expected_rules": [
+      "ISOLATED_BLEEDING_UNDER_50"
+    ],
+    "features": {
+      "age": 29,
+      "rectal_bleeding": true,
+      "bleeding_duration_weeks": 1,
+      "change_in_bowel_habit": false,
+      "unintentional_weight_loss": false,
+      "abdominal_pain": false,
+      "iron_deficiency_anemia": false,
+      "fit_result": "not_done",
+      "family_history_crc": "none",
+      "abdominal_or_rectal_mass": false,
+      "prior_colonoscopy_date": null
+    }
+  },
+  {
+    "id": "weight-loss-pain-over-40",
+    "patient_name": "Synthetic Patient G",
+    "source": "fax_scan",
+    "raw_text": "REFERRAL \u2014 GI CLINIC\nPatient: 47 y/o. Unintentional 12 lb weight loss over 2 months, persistent dull abdominal pain. No bleeding reported.",
+    "expected_urgency": "urgent",
+    "expected_disposition": "BOOK",
+    "expected_rules": [
+      "WEIGHT_LOSS_PLUS_PAIN_OVER_40"
+    ],
+    "features": {
+      "age": 47,
+      "unintentional_weight_loss": true,
+      "abdominal_pain": true,
+      "rectal_bleeding": false,
+      "change_in_bowel_habit": false,
+      "iron_deficiency_anemia": false,
+      "fit_result": "not_done",
+      "family_history_crc": "none",
+      "abdominal_or_rectal_mass": false,
+      "prior_colonoscopy_date": null
+    }
+  },
+  {
+    "id": "persistent-bowel-change",
+    "patient_name": "Synthetic Patient H",
+    "source": "fax_scan",
+    "raw_text": "REFERRAL \u2014 GI CLINIC\nPatient: 33 y/o. 8 weeks of altered bowel habit (alternating diarrhea/constipation). No bleeding, no weight loss.",
+    "expected_urgency": "soon",
+    "expected_disposition": "BOOK",
+    "expected_rules": [
+      "PERSISTENT_BOWEL_CHANGE"
+    ],
+    "features": {
+      "age": 33,
+      "change_in_bowel_habit": true,
+      "bowel_habit_duration_weeks": 8,
+      "rectal_bleeding": false,
+      "unintentional_weight_loss": false,
+      "abdominal_pain": false,
+      "iron_deficiency_anemia": false,
+      "fit_result": "not_done",
+      "family_history_crc": "none",
+      "abdominal_or_rectal_mass": false,
+      "prior_colonoscopy_date": null
+    }
+  },
+  {
+    "id": "over-50-bleeding",
+    "patient_name": "Synthetic Patient I",
+    "source": "fax_scan",
+    "raw_text": "REFERRAL \u2014 GI CLINIC\nPatient: 58 y/o. New rectal bleeding, 2 weeks duration.",
+    "expected_urgency": "urgent",
+    "expected_disposition": "BOOK",
+    "expected_rules": [
+      "BLEEDING_OVER_50"
+    ],
+    "features": {
+      "age": 58,
+      "rectal_bleeding": true,
+      "bleeding_duration_weeks": 2,
+      "change_in_bowel_habit": false,
+      "unintentional_weight_loss": false,
+      "abdominal_pain": false,
+      "iron_deficiency_anemia": false,
+      "fit_result": "not_done",
+      "family_history_crc": "none",
+      "abdominal_or_rectal_mass": false,
+      "prior_colonoscopy_date": null
+    }
+  },
+  {
+    "id": "bowel-habit-over-60",
+    "patient_name": "Synthetic Patient J",
+    "source": "fax_scan",
+    "raw_text": "REFERRAL \u2014 GI CLINIC\nPatient: 71 y/o. New persistent change in bowel habit x 4 weeks, no bleeding.",
+    "expected_urgency": "urgent",
+    "expected_disposition": "BOOK",
+    "expected_rules": [
+      "BOWEL_HABIT_OVER_60"
+    ],
+    "features": {
+      "age": 71,
+      "change_in_bowel_habit": true,
+      "bowel_habit_duration_weeks": 4,
+      "rectal_bleeding": false,
+      "unintentional_weight_loss": false,
+      "abdominal_pain": false,
+      "iron_deficiency_anemia": false,
+      "fit_result": "not_done",
+      "family_history_crc": "none",
+      "abdominal_or_rectal_mass": false,
+      "prior_colonoscopy_date": null
+    }
+  },
+  {
+    "id": "missing-age",
+    "patient_name": "Synthetic Patient K",
+    "source": "fax_scan",
+    "raw_text": "REFERRAL \u2014 GI CLINIC\nPatient age illegible on fax. Reports rectal bleeding x several weeks, no further detail legible.",
+    "expected_urgency": "routine",
+    "expected_disposition": "ESCALATE",
+    "expected_rules": [],
+    "note": "Age is unreadable; several age-gated rules could apply. Must not guess.",
+    "features": {
+      "age": null,
+      "rectal_bleeding": true,
+      "bleeding_duration_weeks": null,
+      "change_in_bowel_habit": null,
+      "unintentional_weight_loss": null,
+      "abdominal_pain": null,
+      "iron_deficiency_anemia": null,
+      "fit_result": "not_done",
+      "family_history_crc": null,
+      "abdominal_or_rectal_mass": null,
+      "prior_colonoscopy_date": null
+    }
+  },
+  {
+    "id": "missing-bleeding-status",
+    "patient_name": "Synthetic Patient L",
+    "source": "fax_scan",
+    "raw_text": "REFERRAL \u2014 GI CLINIC\nPatient: 34 y/o. Referral letter partially cut off by fax machine; symptom section missing.",
+    "expected_urgency": "routine",
+    "expected_disposition": "ESCALATE",
+    "expected_rules": [],
+    "features": {
+      "age": 34,
+      "rectal_bleeding": null,
+      "change_in_bowel_habit": null,
+      "unintentional_weight_loss": null,
+      "abdominal_pain": null,
+      "iron_deficiency_anemia": null,
+      "fit_result": "not_done",
+      "family_history_crc": null,
+      "abdominal_or_rectal_mass": null,
+      "prior_colonoscopy_date": null
+    }
+  },
+  {
+    "id": "contradictory-inputs",
+    "patient_name": "Synthetic Patient M",
+    "source": "voice_call",
+    "raw_text": "Transcript: patient first says 'no bleeding at all', then later says 'well there was some blood once'. Contradictory statements, not resolved during call.",
+    "expected_urgency": "routine",
+    "expected_disposition": "ESCALATE",
+    "expected_rules": [],
+    "note": "Contradictory inputs \u2014 per invariant #3, ESCALATE regardless of what rules would otherwise fire.",
+    "features": {
+      "age": 44,
+      "rectal_bleeding": null,
+      "change_in_bowel_habit": false,
+      "unintentional_weight_loss": false,
+      "abdominal_pain": false,
+      "iron_deficiency_anemia": false,
+      "fit_result": "not_done",
+      "family_history_crc": "none",
+      "abdominal_or_rectal_mass": false,
+      "prior_colonoscopy_date": null
+    }
+  },
+  {
+    "id": "young-bleeding-plus-anemia",
+    "patient_name": "Synthetic Patient N",
+    "source": "fax_scan",
+    "raw_text": "REFERRAL \u2014 GI CLINIC\nPatient: 37 y/o. Rectal bleeding x 5 weeks, labs show iron deficiency anemia.",
+    "expected_urgency": "urgent",
+    "expected_disposition": "BOOK",
+    "expected_rules": [
+      "YOUNG_BLEEDING_PLUS_FEATURE"
+    ],
+    "features": {
+      "age": 37,
+      "rectal_bleeding": true,
+      "bleeding_duration_weeks": 5,
+      "iron_deficiency_anemia": true,
+      "change_in_bowel_habit": false,
+      "unintentional_weight_loss": false,
+      "abdominal_pain": false,
+      "fit_result": "not_done",
+      "family_history_crc": "none",
+      "abdominal_or_rectal_mass": false,
+      "prior_colonoscopy_date": null
+    }
+  },
+  {
+    "id": "screening-with-prior-colonoscopy",
+    "patient_name": "Synthetic Patient O",
+    "source": "fax_scan",
+    "raw_text": "REFERRAL \u2014 GI CLINIC\nPatient: 50 y/o, had colonoscopy 3 years ago, normal. No new symptoms.",
+    "expected_urgency": "routine",
+    "expected_disposition": "ESCALATE",
+    "expected_rules": [],
+    "note": "No rule explicitly matches (screening rule requires no prior). Fails safe to human review rather than silently doing nothing.",
+    "features": {
+      "age": 50,
+      "prior_colonoscopy_date": "2023-01-15",
+      "rectal_bleeding": false,
+      "change_in_bowel_habit": false,
+      "unintentional_weight_loss": false,
+      "abdominal_pain": false,
+      "iron_deficiency_anemia": false,
+      "fit_result": "negative",
+      "family_history_crc": "none",
+      "abdominal_or_rectal_mass": false
+    }
+  }
+]
