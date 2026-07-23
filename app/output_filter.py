@@ -48,6 +48,8 @@ REASSURANCE_PATTERNS = [
     r"probably\s+(just|benign)",
     r"it'?s\s+(probably|likely)\s+(just\s+)?\w+",
     r"you'?re\s+(probably\s+)?fine",
+    r"\bbenign\b",
+    r"\bharmless\b",
 ]
 
 _CONDITION_RE = re.compile(

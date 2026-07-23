@@ -51,6 +51,23 @@ def health() -> dict:
     return {"status": "ok", "demo_mode": True}
 
 
+@app.get("/evals/summary")
+def evals_summary() -> dict:
+    """Backs the dashboard's escalation-recall / false-reassurance tiles.
+
+    Reads the file evals/run.py writes (data/evals_summary.json) rather than
+    recomputing on every request — evals are run explicitly, not on the hot
+    path of a page load.
+    """
+    import json
+
+    path = os.path.join(os.path.dirname(__file__), "..", "data", "evals_summary.json")
+    if not os.path.exists(path):
+        raise HTTPException(404, "no evals run yet — run `python -m evals.run`")
+    with open(path) as f:
+        return json.load(f)
+
+
 # ---------------------------------------------------------------------------
 # Nurse worklist: referrals + verdicts
 # ---------------------------------------------------------------------------
