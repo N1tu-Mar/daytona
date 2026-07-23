@@ -377,6 +377,44 @@ def submit_pa_packet(packet_id: str) -> dict:
         session.close()
 
 
+# ---------------------------------------------------------------------------
+# Payer IVR (build order step 7)
+# ---------------------------------------------------------------------------
+
+
+@app.post("/pa-packets/{packet_id}/call-ivr")
+def call_ivr(packet_id: str) -> dict:
+    """Dials the mock payer IVR, navigates it, and records the result.
+
+    Only callable once a packet has been submitted — chasing status on
+    something never sent to the payer doesn't make sense."""
+    from services.ivr.agent import call_payer_ivr
+
+    session = get_session()
+    try:
+        pkt = session.get(PAPacketRecord, packet_id)
+        if not pkt:
+            raise HTTPException(404, "packet not found")
+        if pkt.status != "submitted" and pkt.payer_status is None:
+            raise HTTPException(409, "packet must be submitted before checking payer status")
+
+        result = call_payer_ivr(packet_id)
+        pkt.payer_status = result.status
+        pkt.days_saved = result.days_saved
+        if result.status == "approved":
+            pkt.status = "approved_by_payer"
+        elif result.status == "denied":
+            pkt.status = "denied"
+        session.commit()
+        return {
+            "status": result.status,
+            "days_saved": result.days_saved,
+            "transcript": result.transcript,
+        }
+    finally:
+        session.close()
+
+
 if __name__ == "__main__":
     import uvicorn
 
