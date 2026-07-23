@@ -126,6 +126,11 @@ def _worklist_item(session, ref: ReferralRecord) -> dict:
         "raw_text": ref.raw_text,
         "created_at": ref.created_at.isoformat(),
         "features": features.model_dump(mode="json"),
+        "sandbox": {
+            "sandbox_id": ref.sandbox_id,
+            "duration_ms": ref.sandbox_ms,
+            "sandboxed": bool(ref.sandboxed),
+        },
         "verdict": None
         if verdict is None
         else {
