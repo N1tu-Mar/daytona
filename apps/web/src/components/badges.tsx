@@ -1,4 +1,4 @@
-import type { Disposition, Urgency } from "@/lib/types";
+import type { Disposition, SandboxInfo, Urgency } from "@/lib/types";
 
 // Color-coded per spec: routine=gray, soon=blue, urgent=orange, emergency=red.
 const URGENCY_STYLES: Record<Urgency, string> = {
@@ -30,6 +30,25 @@ export function DispositionBadge({ disposition }: { disposition: Disposition }) 
       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${DISPOSITION_STYLES[disposition]}`}
     >
       {disposition.replace("_", " ")}
+    </span>
+  );
+}
+
+// Auditable proof the document was decoded inside an isolated, network-blocked
+// Daytona sandbox that was then destroyed. Renders nothing for synthetic seed
+// data or the unsandboxed local-decode fallback (sandboxed === false).
+export function SandboxBadge({ sandbox }: { sandbox: SandboxInfo | null | undefined }) {
+  if (!sandbox?.sandboxed) return null;
+  const secs =
+    sandbox.duration_ms != null ? `${(sandbox.duration_ms / 1000).toFixed(1)}s` : null;
+  return (
+    <span
+      title="Untrusted document decoded inside an isolated, network-blocked Daytona sandbox, then destroyed."
+      className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:ring-emerald-700"
+    >
+      🔒 Daytona sandbox
+      {sandbox.sandbox_id ? <span className="font-mono">{sandbox.sandbox_id}</span> : null}
+      {secs ? <span className="text-emerald-600 dark:text-emerald-400">· {secs}</span> : null}
     </span>
   );
 }
