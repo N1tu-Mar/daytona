@@ -7,6 +7,7 @@ import { ApiError, get } from "@/lib/api";
 import type { ReferralWorklistItem, TriageVerdict } from "@/lib/types";
 import FeatureTable from "@/components/FeatureTable";
 import VerdictPanel from "@/components/VerdictPanel";
+import { SandboxBadge } from "@/components/badges";
 
 export default function ReferralDetailPage() {
   const params = useParams<{ id: string }>();
@@ -59,6 +60,11 @@ export default function ReferralDetailPage() {
             <p className="mt-1 text-sm text-slate-500">
               {item.source} · received {new Date(item.created_at).toLocaleString()}
             </p>
+            {item.sandbox?.sandboxed && (
+              <div className="mt-2">
+                <SandboxBadge sandbox={item.sandbox} />
+              </div>
+            )}
           </div>
 
           <div>
