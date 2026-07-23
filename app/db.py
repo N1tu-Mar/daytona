@@ -7,12 +7,25 @@ UPDATE a verdict; corrections INSERT a new row with corrects_verdict_id set).
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, create_engine
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    create_engine,
+    inspect as sa_inspect,
+    text,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
-DATABASE_URL = "sqlite:///./scoped.db"
+# Overridable so tests (and any throwaway environment) can point at an
+# isolated DB instead of the demo's scoped.db. See tests/conftest.py.
+DATABASE_URL = os.environ.get("SCOPED_DB_URL", "sqlite:///./scoped.db")
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
@@ -31,6 +44,13 @@ class ReferralRecord(Base):
     patient_name: Mapped[str] = mapped_column(String, default="")  # synthetic only
     features_json: Mapped[str] = mapped_column(String)  # ReferralFeatures.model_dump_json()
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    # Daytona sandbox provenance: auditable evidence the document was decoded
+    # in an isolated sandbox. Null/False for synthetic seed data and for the
+    # unsandboxed local-decode fallback (no DAYTONA_API_KEY).
+    sandbox_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    sandbox_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sandboxed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
 
 class TriageVerdictRecord(Base):
@@ -72,6 +92,29 @@ class PAPacketRecord(Base):
 
 def init_db() -> None:
     Base.metadata.create_all(engine)
+    _migrate_referral_sandbox_columns()
+
+
+def _migrate_referral_sandbox_columns() -> None:
+    """Additive, idempotent migration for the sandbox-provenance columns.
+
+    create_all() never ALTERs an existing table, so a scoped.db created before
+    these columns existed would be missing them. Add them in place rather than
+    forcing a manual DB reset — safe to run on every startup.
+    """
+    insp = sa_inspect(engine)
+    if "referrals" not in insp.get_table_names():
+        return
+    existing = {c["name"] for c in insp.get_columns("referrals")}
+    additions = {
+        "sandbox_id": "ALTER TABLE referrals ADD COLUMN sandbox_id VARCHAR",
+        "sandbox_ms": "ALTER TABLE referrals ADD COLUMN sandbox_ms INTEGER",
+        "sandboxed": "ALTER TABLE referrals ADD COLUMN sandboxed BOOLEAN NOT NULL DEFAULT 0",
+    }
+    with engine.begin() as conn:
+        for col, ddl in additions.items():
+            if col not in existing:
+                conn.execute(text(ddl))
 
 
 def get_session() -> Session:
