@@ -9,7 +9,7 @@ import logging
 import os
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -109,6 +109,36 @@ def _worklist_item(session, ref: ReferralRecord) -> dict:
             "booked_slot": verdict.booked_slot,
         },
     }
+
+
+@app.post("/referrals")
+async def upload_referral(
+    file: UploadFile = File(...),
+    patient_name: str = Form(""),
+    source: str = Form("fax_scan"),
+) -> dict:
+    """Build order step 3: parse -> verdict, end to end.
+
+    Runs synchronously (documents are small and the demo path needs an
+    immediate worklist entry) inside the sandboxed pipeline in
+    services/referral/pipeline.py. Never 5xxs on a bad document — the
+    pipeline always produces a persisted, human-visible ESCALATE verdict
+    instead of failing the request.
+    """
+    from services.referral.pipeline import process_referral
+
+    content = await file.read()
+    record, verdict = process_referral(
+        content=content,
+        filename=file.filename or "upload",
+        patient_name=patient_name,
+        source=source,
+    )
+    session = get_session()
+    try:
+        return _worklist_item(session, session.get(ReferralRecord, record.id))
+    finally:
+        session.close()
 
 
 @app.get("/referrals")
