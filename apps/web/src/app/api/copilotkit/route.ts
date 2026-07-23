@@ -1,27 +1,20 @@
-// CopilotKit runtime endpoint. Runs server-side only (no NEXT_PUBLIC_* keys
-// involved — invariant: no backend API keys ship to the client).
+// CopilotKit runtime endpoint — intentionally inert.
 //
-// The demo doesn't wire the copilot to a real LLM yet (no Fireworks/OpenAI
-// key is provisioned for the frontend), so this uses EmptyAdapter: it keeps
-// the CopilotKit provider + sidebar chrome real and functioning rather than
-// a commented-out stub, without pretending to answer clinical questions.
-// Swapping in a real adapter later is a one-line change here.
-import {
-  CopilotRuntime,
-  EmptyAdapter,
-  copilotRuntimeNextJSAppRouterEndpoint,
-} from "@copilotkit/runtime";
-import { NextRequest } from "next/server";
+// The app no longer mounts a CopilotKit provider (see src/components/Providers.tsx),
+// so nothing in the app calls this route. It's kept only so that a stale
+// browser tab from an older build that still POSTs here gets a clean, valid
+// response instead of hitting a runtime that throws `CopilotApiDiscoveryError`
+// and crashes the server process.
+//
+// To restore a real copilot: reinstate the CopilotRuntime + a real LLM
+// adapter here (see git history for the previous EmptyAdapter version) and
+// re-mount <CopilotKit> in Providers.tsx.
+import { NextResponse } from "next/server";
 
-const runtime = new CopilotRuntime();
-const serviceAdapter = new EmptyAdapter();
+export const POST = async () => {
+  return NextResponse.json({ data: null }, { status: 200 });
+};
 
-export const POST = async (req: NextRequest) => {
-  const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
-    runtime,
-    serviceAdapter,
-    endpoint: "/api/copilotkit",
-  });
-
-  return handleRequest(req);
+export const GET = async () => {
+  return NextResponse.json({ status: "copilot runtime disabled in demo" }, { status: 200 });
 };
