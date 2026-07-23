@@ -1,0 +1,82 @@
+# Scoped clinical triage rules.
+#
+# These approximate published guidance (NICE NG12 lower-GI, ACG/USPSTF
+# screening) for a demo. They are NOT clinically validated and must not be
+# used for care. Keep this file reviewable by a clinician in five minutes.
+#
+# Evaluation semantics: evaluate ALL rules, collect every match, take the
+# HIGHEST urgency. Never first-match-wins.
+
+version: "2026.07.24-1"
+
+rules:
+  - id: MASS_ON_EXAM
+    when: "abdominal_or_rectal_mass == true"
+    urgency: urgent
+    rationale: "Palpable mass warrants urgent evaluation"
+    requires: [abdominal_or_rectal_mass]
+
+  - id: POSITIVE_FIT
+    when: "fit_result == 'positive'"
+    urgency: urgent
+    rationale: "Positive FIT meets criteria for diagnostic colonoscopy"
+    requires: [fit_result]
+
+  - id: BLEEDING_OVER_50
+    when: "age >= 50 and rectal_bleeding == true"
+    urgency: urgent
+    rationale: "Rectal bleeding at age 50+ warrants urgent evaluation"
+    requires: [age, rectal_bleeding]
+
+  - id: IDA_OVER_60
+    when: "age >= 60 and iron_deficiency_anemia == true"
+    urgency: urgent
+    rationale: "Iron deficiency anemia at age 60+ warrants urgent evaluation"
+    requires: [age, iron_deficiency_anemia]
+
+  - id: BOWEL_HABIT_OVER_60
+    when: "age >= 60 and change_in_bowel_habit == true"
+    urgency: urgent
+    rationale: "Change in bowel habit at age 60+ warrants urgent evaluation"
+    requires: [age, change_in_bowel_habit]
+
+  - id: WEIGHT_LOSS_PLUS_PAIN_OVER_40
+    when: "age >= 40 and unintentional_weight_loss == true and abdominal_pain == true"
+    urgency: urgent
+    rationale: "Unintentional weight loss plus abdominal pain at age 40+ warrants urgent evaluation"
+    requires: [age, unintentional_weight_loss, abdominal_pain]
+
+  # THE DEMO CASE — young patient, bleeding, plus any second feature.
+  # This is the rule that catches the 42-year-old written off as hemorrhoids.
+  - id: YOUNG_BLEEDING_PLUS_FEATURE
+    when: >
+      age < 50 and rectal_bleeding == true and (
+        abdominal_pain == true or change_in_bowel_habit == true or
+        unintentional_weight_loss == true or iron_deficiency_anemia == true
+      )
+    urgency: urgent
+    rationale: >
+      Early-onset CRC incidence rising 3%/yr in ages 20-49; 3 in 4 cases
+      in under-50s present at advanced stage. Bleeding in a young adult
+      is not assumed benign.
+    requires: [age, rectal_bleeding]
+
+  - id: ISOLATED_BLEEDING_UNDER_50
+    when: "age < 50 and rectal_bleeding == true"
+    urgency: soon
+    rationale: "Warrants evaluation; not assumed benign"
+    requires: [age, rectal_bleeding]
+
+  - id: PERSISTENT_BOWEL_CHANGE
+    when: "change_in_bowel_habit == true and bowel_habit_duration_weeks >= 6"
+    urgency: soon
+    rationale: "Persistent change in bowel habit (6+ weeks) warrants evaluation"
+    requires: [change_in_bowel_habit, bowel_habit_duration_weeks]
+
+  - id: SCREENING_AGE_NO_PRIOR
+    # prior_colonoscopy_date == null is a meaningful value here ("no prior
+    # exam on record"), not a missing-data signal, so it is not `required`.
+    when: "age >= 45 and prior_colonoscopy_date == null"
+    urgency: routine
+    rationale: "USPSTF screening age is 45"
+    requires: [age]
