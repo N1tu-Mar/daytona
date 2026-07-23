@@ -69,6 +69,39 @@ def evals_summary() -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Voice intake (build order step 5)
+# ---------------------------------------------------------------------------
+
+
+class IntakeCallRequest(BaseModel):
+    patient_answers: dict[str, str]
+
+
+@app.post("/intake/call")
+def intake_call(body: IntakeCallRequest) -> dict:
+    """Runs the fixed-order intake script and books a slot in the same call.
+
+    `patient_answers` maps question field name -> the caller's answer text.
+    This is the seam an ElevenLabs webhook fills in turn-by-turn in
+    production; for the demo it's supplied up front to simulate a full call.
+    """
+    from uuid import uuid4
+
+    from services.intake.call import run_call
+
+    referral_id = str(uuid4())
+    result = run_call(referral_id, body.patient_answers)
+    return {
+        "referral_id": result.referral_id,
+        "transcript": [{"speaker": t.speaker, "text": t.text} for t in result.transcript],
+        "urgency": result.urgency,
+        "disposition": result.disposition,
+        "booked_slot": result.booked_slot,
+        "final_message": result.final_message,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Nurse worklist: referrals + verdicts
 # ---------------------------------------------------------------------------
 
