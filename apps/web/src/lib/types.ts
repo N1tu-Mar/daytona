@@ -40,6 +40,10 @@ export interface SandboxInfo {
   sandbox_id: string | null;
   duration_ms: number | null;
   sandboxed: boolean;
+  // "snapshot:scoped-parse:1" | "image:<ref>" | "declarative-build" | null.
+  // Which OS decoded the document — a prebuilt snapshot boots faster than a
+  // declarative build. Null on older rows created before this was recorded.
+  sandbox_source: string | null;
 }
 
 export interface ReferralWorklistItem {

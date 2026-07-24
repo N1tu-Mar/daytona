@@ -41,14 +41,25 @@ export function SandboxBadge({ sandbox }: { sandbox: SandboxInfo | null | undefi
   if (!sandbox?.sandboxed) return null;
   const secs =
     sandbox.duration_ms != null ? `${(sandbox.duration_ms / 1000).toFixed(1)}s` : null;
+  // "snapshot:scoped-parse:1" -> "snapshot", "declarative-build" -> "build".
+  // The prefix is the audit-worthy bit (which OS parsed this); the full label
+  // lives in the tooltip. Null on older rows — then we just omit it.
+  const source = sandbox.sandbox_source;
+  const sourceShort = source ? source.split(":")[0] : null;
   return (
     <span
-      title="Untrusted document decoded inside an isolated, network-blocked Daytona sandbox, then destroyed."
+      title={
+        "Untrusted document decoded inside an isolated, network-blocked Daytona sandbox, then destroyed." +
+        (source ? `\nParsed by: ${source}` : "")
+      }
       className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:ring-emerald-700"
     >
       🔒 Daytona sandbox
       {sandbox.sandbox_id ? <span className="font-mono">{sandbox.sandbox_id}</span> : null}
       {secs ? <span className="text-emerald-600 dark:text-emerald-400">· {secs}</span> : null}
+      {sourceShort ? (
+        <span className="text-emerald-600 dark:text-emerald-400">· {sourceShort}</span>
+      ) : null}
     </span>
   );
 }

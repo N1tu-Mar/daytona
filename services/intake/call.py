@@ -54,7 +54,7 @@ def _by_field(field_name: str):
     return next(q for q in QUESTION_SCRIPT if q.field == field_name)
 
 
-def run_call(referral_id: str, patient_answers: dict[str, str]) -> CallResult:
+def run_call(referral_id: str, patient_answers: dict[str, str], patient_name: str = "") -> CallResult:
     """Runs the fixed-order script against a map of field -> patient answer
     text (this is the seam a live ElevenLabs webhook would fill in turn by
     turn; here it's supplied up front for a scripted/simulated call).
@@ -136,7 +136,7 @@ def run_call(referral_id: str, patient_answers: dict[str, str]) -> CallResult:
             "call you back shortly to finish getting you scheduled."
         )
 
-    _persist(referral_id, features, verdict, booked_slot)
+    _persist(referral_id, features, verdict, booked_slot, patient_name)
 
     return CallResult(
         referral_id=referral_id,
@@ -149,7 +149,13 @@ def run_call(referral_id: str, patient_answers: dict[str, str]) -> CallResult:
     )
 
 
-def _persist(referral_id: str, features: ReferralFeatures, verdict, booked_slot: str | None) -> None:
+def _persist(
+    referral_id: str,
+    features: ReferralFeatures,
+    verdict,
+    booked_slot: str | None,
+    patient_name: str = "",
+) -> None:
     session = get_session()
     try:
         session.add(
@@ -157,7 +163,7 @@ def _persist(referral_id: str, features: ReferralFeatures, verdict, booked_slot:
                 id=referral_id,
                 source="voice_call",
                 raw_text="",
-                patient_name="",
+                patient_name=patient_name,
                 features_json=features.model_dump_json(),
             )
         )
