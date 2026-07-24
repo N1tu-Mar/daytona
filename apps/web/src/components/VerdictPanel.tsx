@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ApiError, post } from "@/lib/api";
-import { RULE_RATIONALE } from "@/lib/ruleRationale";
+import { RULE_EVIDENCE, RULE_RATIONALE } from "@/lib/ruleRationale";
 import type { ApproveResponse, TriageVerdict } from "@/lib/types";
 import { DispositionBadge, UrgencyBadge } from "@/components/badges";
 
@@ -55,6 +55,22 @@ export default function VerdictPanel({
                 </code>
                 {RULE_RATIONALE[ruleId] && (
                   <p className="mt-1 text-slate-600 dark:text-slate-400">{RULE_RATIONALE[ruleId]}</p>
+                )}
+                {RULE_EVIDENCE[ruleId] && (
+                  <p className="mt-1.5 text-xs text-slate-500">
+                    <span className="font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+                      Evidence:
+                    </span>{" "}
+                    {RULE_EVIDENCE[ruleId].finding}{" "}
+                    <a
+                      href={RULE_EVIDENCE[ruleId].url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline decoration-slate-300 underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300"
+                    >
+                      {RULE_EVIDENCE[ruleId].source}
+                    </a>
+                  </p>
                 )}
               </li>
             ))}

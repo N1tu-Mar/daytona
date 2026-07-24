@@ -263,6 +263,36 @@ keys with that prefix, ever.** Those stay server-side on the backend.
    status retrieved, audible on the packet page (`POST /pa-packets/{id}/submit`,
    `POST /pa-packets/{id}/call-ivr?voice=true`)
 
+## Where the rules come from (real data, not vibes)
+
+Every rule in `app/rules.yaml` carries an `evidence:` block citing the
+published real-patient data its threshold transcribes, and
+`tests/test_rule_evidence.py` fails the build if a rule ever ships without
+one. The nurse worklist shows the evidence line (with a link to the study)
+under every fired rule.
+
+Primary sources:
+
+- **Hamilton et al., CAPER study (Br J Cancer 2005)** — case-control study of
+  349 colorectal cancer cases + 1,744 matched controls from real UK
+  primary-care records. Gives the measured PPVs the rules encode: rectal
+  bleeding 2.4%, weight loss 1.2%, abdominal pain 1.1%, Hb<10 2.3%, abnormal
+  rectal exam 4.0%, positive faecal occult blood 7.1% — and the finding that
+  **any second feature raises risk to the investigation threshold**, which is
+  exactly the demo rule (`YOUNG_BLEEDING_PLUS_FEATURE`).
+  <https://pmc.ncbi.nlm.nih.gov/articles/PMC2361578/>
+- **NICE NG12** — the UK suspected-cancer referral guideline (built on
+  primary-care cohort evidence, ~3% PPV urgent-referral threshold); the
+  age-gated urgent rules mirror its lower-GI criteria.
+  <https://www.nice.org.uk/guidance/ng12>
+- **USPSTF 2021** — colorectal screening from age 45 (Grade B for 45–49,
+  Grade A for 50–75); backs `SCREENING_AGE_NO_PRIOR`.
+
+The honest line for the stage: *nothing here is trained on patient data —
+that's the point. The thresholds are epidemiology measured on thousands of
+real patients; the code just enforces them, and you can audit every number
+back to its study.*
+
 ## Evals & observability (Braintrust)
 
 Three artifacts, all in the Braintrust project `meridian`:

@@ -49,7 +49,7 @@ const STEPS = [
   },
   {
     title: "Versioned rules set the urgency",
-    body: "A plain config file of clinical red-flag rules — auditable in five minutes, unit-tested, zero model calls. Every verdict records exactly which rules fired and which version decided.",
+    body: "A plain config file of clinical red-flag rules — auditable in five minutes, unit-tested, zero model calls. The thresholds aren't invented: each rule cites measured epidemiology (CAPER's 2,093-patient primary-care cohort, NICE NG12, USPSTF), and a rule without a citation fails the build. Every verdict records exactly which rules fired and which version decided.",
   },
   {
     title: "A person signs everything",

@@ -6,6 +6,15 @@
 #
 # Evaluation semantics: evaluate ALL rules, collect every match, take the
 # HIGHEST urgency. Never first-match-wins.
+#
+# Every rule carries an `evidence:` block tying its threshold to published
+# real-patient data — chiefly NICE NG12 (the UK suspected-cancer referral
+# guideline, built on primary-care cohort evidence) and Hamilton et al.'s
+# CAPER case-control study (349 colorectal cancer cases + 1,744 matched
+# controls from real UK primary-care records; Br J Cancer 2005). PPV =
+# positive predictive value for colorectal cancer among symptomatic
+# primary-care patients aged 40+ in that study. The rules are not invented
+# heuristics; they are measured epidemiology, transcribed into config.
 
 version: "2026.07.24-1"
 
@@ -15,36 +24,66 @@ rules:
     urgency: urgent
     rationale: "Palpable mass warrants urgent evaluation"
     requires: [abdominal_or_rectal_mass]
+    evidence:
+      source: "Hamilton et al., CAPER study (Br J Cancer 2005); NICE NG12"
+      cohort: "349 CRC cases + 1,744 matched controls, UK primary care"
+      finding: "Abnormal rectal examination: PPV 4.0% (95% CI 2.4-7.4) for CRC — above the ~3% PPV threshold NG12 uses for urgent referral"
+      url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC2361578/"
 
   - id: POSITIVE_FIT
     when: "fit_result == 'positive'"
     urgency: urgent
     rationale: "Positive FIT meets criteria for diagnostic colonoscopy"
     requires: [fit_result]
+    evidence:
+      source: "Hamilton et al., CAPER study (Br J Cancer 2005); NICE NG12/DG30"
+      cohort: "349 CRC cases + 1,744 matched controls, UK primary care"
+      finding: "Positive faecal occult blood: PPV 7.1% (95% CI 5.1-10) for CRC — the single strongest predictor measured; positive stool test routes to diagnostic colonoscopy in NG12/DG30"
+      url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC2361578/"
 
   - id: BLEEDING_OVER_50
     when: "age >= 50 and rectal_bleeding == true"
     urgency: urgent
     rationale: "Rectal bleeding at age 50+ warrants urgent evaluation"
     requires: [age, rectal_bleeding]
+    evidence:
+      source: "NICE NG12 1.3.2; Hamilton et al., CAPER study (Br J Cancer 2005)"
+      cohort: "349 CRC cases + 1,744 matched controls, UK primary care"
+      finding: "Rectal bleeding: PPV 2.4% (95% CI 1.9-3.2) overall, rising with age — NG12 refers unexplained rectal bleeding at 50+ on the urgent (2-week-wait) pathway"
+      url: "https://www.nice.org.uk/guidance/ng12"
 
   - id: IDA_OVER_60
     when: "age >= 60 and iron_deficiency_anemia == true"
     urgency: urgent
     rationale: "Iron deficiency anemia at age 60+ warrants urgent evaluation"
     requires: [age, iron_deficiency_anemia]
+    evidence:
+      source: "NICE NG12 1.3.1; Hamilton et al., CAPER study (Br J Cancer 2005)"
+      cohort: "349 CRC cases + 1,744 matched controls, UK primary care"
+      finding: "Haemoglobin <10 g/dL: PPV 2.3% (95% CI 1.6-3.1) for CRC — NG12 refers iron-deficiency anaemia at 60+ on the urgent pathway"
+      url: "https://www.nice.org.uk/guidance/ng12"
 
   - id: BOWEL_HABIT_OVER_60
     when: "age >= 60 and change_in_bowel_habit == true"
     urgency: urgent
     rationale: "Change in bowel habit at age 60+ warrants urgent evaluation"
     requires: [age, change_in_bowel_habit]
+    evidence:
+      source: "NICE NG12 1.3.1; Hamilton et al., CAPER study (Br J Cancer 2005)"
+      cohort: "349 CRC cases + 1,744 matched controls, UK primary care"
+      finding: "Change in bowel habit at 60+ meets the NG12 urgent-referral criterion; CAPER measured diarrhoea PPV 0.94% and constipation 0.42% alone, with risk concentrating at older ages and in combination"
+      url: "https://www.nice.org.uk/guidance/ng12"
 
   - id: WEIGHT_LOSS_PLUS_PAIN_OVER_40
     when: "age >= 40 and unintentional_weight_loss == true and abdominal_pain == true"
     urgency: urgent
     rationale: "Unintentional weight loss plus abdominal pain at age 40+ warrants urgent evaluation"
     requires: [age, unintentional_weight_loss, abdominal_pain]
+    evidence:
+      source: "NICE NG12 1.3.1; Hamilton et al., CAPER study (Br J Cancer 2005)"
+      cohort: "349 CRC cases + 1,744 matched controls, UK primary care"
+      finding: "Weight loss (PPV 1.2%) and abdominal pain (PPV 1.1%) individually sit below the referral threshold, but CAPER found any second feature raises risk to the level where investigation is warranted — NG12 encodes exactly this pair at 40+"
+      url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC2361578/"
 
   # THE DEMO CASE — young patient, bleeding, plus any second feature.
   # This is the rule that catches the 42-year-old written off as hemorrhoids.
@@ -60,18 +99,33 @@ rules:
       in under-50s present at advanced stage. Bleeding in a young adult
       is not assumed benign.
     requires: [age, rectal_bleeding]
+    evidence:
+      source: "NICE NG12 1.3.3; Hamilton et al., CAPER study (Br J Cancer 2005); ACS/SEER early-onset trends"
+      cohort: "349 CRC cases + 1,744 matched controls, UK primary care"
+      finding: "Rectal bleeding alone: PPV 2.4%; CAPER found the presence of any second feature raises CRC risk to the investigation threshold. NG12 1.3.3 lists under-50 rectal bleeding with a second lower-GI feature as a referral criterion"
+      url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC2361578/"
 
   - id: ISOLATED_BLEEDING_UNDER_50
     when: "age < 50 and rectal_bleeding == true"
     urgency: soon
     rationale: "Warrants evaluation; not assumed benign"
     requires: [age, rectal_bleeding]
+    evidence:
+      source: "Hamilton et al., CAPER study (Br J Cancer 2005)"
+      cohort: "349 CRC cases + 1,744 matched controls, UK primary care"
+      finding: "Rectal bleeding carries a measured 2.4% PPV for CRC in symptomatic primary-care patients — isolated bleeding under 50 sits below the urgent threshold but is never dismissed as benign"
+      url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC2361578/"
 
   - id: PERSISTENT_BOWEL_CHANGE
     when: "change_in_bowel_habit == true and bowel_habit_duration_weeks >= 6"
     urgency: soon
     rationale: "Persistent change in bowel habit (6+ weeks) warrants evaluation"
     requires: [change_in_bowel_habit, bowel_habit_duration_weeks]
+    evidence:
+      source: "NICE NG12 / NHS 2-week-wait criteria (persistence threshold)"
+      cohort: "UK primary-care referral guidance evidence review"
+      finding: "A bowel-habit change persisting 6+ weeks is the classic persistence threshold used in UK lower-GI referral criteria to separate transient change from presentations needing evaluation"
+      url: "https://www.nice.org.uk/guidance/ng12"
 
   - id: SCREENING_AGE_NO_PRIOR
     # prior_colonoscopy_date == null is a meaningful value here ("no prior
@@ -80,3 +134,8 @@ rules:
     urgency: routine
     rationale: "USPSTF screening age is 45"
     requires: [age]
+    evidence:
+      source: "USPSTF 2021 colorectal cancer screening recommendation"
+      cohort: "US population-level modeling + trial evidence reviewed by USPSTF"
+      finding: "USPSTF recommends screening from age 45 (Grade B for 45-49, Grade A for 50-75); no prior colonoscopy on record at 45+ routes to routine screening"
+      url: "https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/colorectal-cancer-screening"
