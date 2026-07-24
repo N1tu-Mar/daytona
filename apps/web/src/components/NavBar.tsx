@@ -16,7 +16,7 @@ export default function NavBar() {
   return (
     <header className="sticky top-[33px] z-40 w-full border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-        <Link href="/worklist" className="flex items-baseline gap-2">
+        <Link href="/" className="flex items-baseline gap-2">
           <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
             Meridian
           </span>

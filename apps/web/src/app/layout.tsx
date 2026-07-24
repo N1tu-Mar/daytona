@@ -16,8 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Meridian — nurse worklist",
-  description: "DEMO — synthetic data. Not for clinical use.",
+  title: "Meridian — referral triage, not diagnosis",
+  description:
+    "An agent that moves a patient from 'something's wrong' to a booked colonoscopy with prior auth approved. DEMO — synthetic data. Not for clinical use.",
 };
 
 export default function RootLayout({
