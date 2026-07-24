@@ -12,7 +12,10 @@ the non-negotiable invariants this codebase enforces in code, not prompts.
 Two entry points, one deterministic core:
 
 - **Voice intake** — patient calls, a fixed-order question flow elicits red-flag
-  features, and a slot is booked at the matching urgency in the same call.
+  features, and a slot is booked at the matching urgency in the same call. The
+  `/intake` page plays the call audibly (ElevenLabs voices both sides) and every
+  agent line passes the no-diagnosis output filter *inside the synthesizer* — the
+  voice physically cannot say "cancer" or "it's probably nothing."
 - **Referral triage** — a scanned GI referral is parsed inside a Daytona sandbox,
   features are extracted, and a nurse worklist shows the verdict, the rules that fired,
   and the source snippet behind every feature. If it needs prior auth, the agent drafts
@@ -55,14 +58,16 @@ no code path that auto-clears a patient.
 ## Layout
 
 ```
-app/                 schemas, monotonic urgency, rule engine, output filter, DB, FastAPI app
+app/                 schemas, monotonic urgency, rule engine, output filter, tracing, DB, FastAPI app
 services/referral/   Daytona-sandboxed parsing -> Fireworks extraction -> rule engine
 services/intake/     voice intake: fixed-order questions, deterministic parsing, booking
+services/voice/      ElevenLabs TTS (filter-enforced, disk-cached) + local DTMF tone synthesis
 services/priorauth/  PA packet drafting with enforced source_refs
 services/ivr/        mock payer IVR state machine + agent navigation
-evals/               Braintrust-ready triage accuracy + red-team safety datasets
+evals/               Braintrust experiments: triage accuracy, red-team safety, extraction A/B
 data/synthetic/      seed referrals, incl. the 42-year-old demo case
-apps/web/            Next.js + Tailwind frontend (nurse worklist, PA approval, dashboard)
+data/voice_cache/    committed audio for the canonical demo (works with zero keys/wifi)
+apps/web/            Next.js + Tailwind frontend (intake line, nurse worklist, PA approval, dashboard)
 tests/               pytest, incl. the hypothesis monotonicity property test
 ```
 
@@ -98,11 +103,12 @@ What each key unlocks, and what happens without it:
 |---|---|---|
 | Fireworks | Uploaded referral text is extracted into structured features | Upload routes to `ESCALATE` for human review (seeded demo cases still work — they carry known features) |
 | Daytona | Documents are decoded in an isolated sandbox; provenance (`sandbox_id`, duration) is logged and badged | Parsing is refused and the referral escalates — it never falls back to parsing untrusted files in-process |
-| ElevenLabs | Audible voice calls | Text-transcript simulation of the same call flow |
-| Braintrust | `python -m evals.run` also logs experiments remotely | Evals still run and write `data/evals_summary.json` locally |
+| ElevenLabs | Audible voice calls (intake + payer IVR), synthesized fresh and disk-cached | The canonical demo case still plays from `data/voice_cache/`; anything uncached degrades to captions |
+| Braintrust | Live pipeline traces (sandbox → extraction → rules spans) + `evals` experiments | Evals still run and write `data/evals_summary.json` locally; tracing is a no-op |
 
 Tuning knobs (all optional, sane defaults): `FIREWORKS_MODEL` (default
-`accounts/fireworks/models/deepseek-v4-pro`), `FIREWORKS_TIMEOUT_S` (60),
+`accounts/fireworks/models/deepseek-v4-flash` — chosen by the extraction A/B
+below, not by vibes), `FIREWORKS_TIMEOUT_S` (60),
 `FIREWORKS_MAX_TOKENS` (8192 — reasoning models spend tokens thinking before they
 answer), `DAYTONA_SANDBOX_TIMEOUT_S` (60), `DAYTONA_SANDBOX_CREATE_TIMEOUT_S` (180),
 `MERIDIAN_DB_URL` (defaults to SQLite at `./meridian.db`).
@@ -247,13 +253,97 @@ keys with that prefix, ever.** Those stay server-side on the backend.
 
 ## Demo path
 
-1. Patient voice call -> red flags elicited -> urgent slot booked live (`POST /intake/call`)
+1. Patient voice call on `/intake` -> red flags elicited audibly -> urgent slot booked
+   in the same call (`POST /intake/call` with `voice: true`)
 2. Faxed referral, 42yo, "probable hemorrhoids" -> agent flags urgent -> nurse approves
    (`POST /referrals` upload, worklist UI, `POST /referrals/{id}/verdicts/{id}/approve`)
 3. PA packet drafted, criteria linked to evidence -> physician one-click approves
    (`POST /pa-packets`, `POST /pa-packets/{id}/approve`)
-4. Agent dials mock IVR -> navigates tree -> status retrieved -> dashboard flips to approved
-   (`POST /pa-packets/{id}/submit`, `POST /pa-packets/{id}/call-ivr`)
+4. Agent dials mock payer IVR -> navigates the phone tree with real touch-tones ->
+   status retrieved, audible on the packet page (`POST /pa-packets/{id}/submit`,
+   `POST /pa-packets/{id}/call-ivr?voice=true`)
+
+## Evals & observability (Braintrust)
+
+Three artifacts, all in the Braintrust project `meridian`:
+
+1. **Live traces.** Every referral upload and intake call is traced end to end:
+   root span -> sandbox parse (with `sandbox_id`) -> Fireworks extraction (model,
+   latency, token usage) -> rule engine (rules fired, rule version). Any
+   surprising production decision is replayable and becomes a future eval case.
+   Tracing is fail-open: without a key the pipeline is byte-identical.
+2. **Experiments** (`python -m evals.run`, or `-m evals.braintrust_eval`):
+   triage accuracy over ~30 gold cases and output safety over 40 red-team rows
+   (each unsafe response must block AND its safe rephrasing must pass). All
+   scorers are deterministic code — the eval stack holds itself to the same
+   "rules decide" standard as the product. Headline: escalation recall 100%,
+   false reassurance 0, and over-triage reported honestly rather than hidden.
+3. **Extraction model A/B** (`python -m evals.extraction_ab`): candidate
+   Fireworks models extract the same 15 gold-labeled referral texts; Braintrust
+   diffs the experiments. Scorers measure what a clinician would ask —
+   `verdict_preserved` (did extraction errors change the outcome),
+   `extraction_escalation_safety` (urgent cases stay safe through lossy
+   extraction), `asserted_precision` (hallucination detector). Measured result:
+   `deepseek-v4-flash` beat `-pro` (verdict_preserved 0.73 vs 0.67, zero errors
+   vs timeouts, ~16x faster), both at 100% asserted precision and 100%
+   escalation safety — so flash is the production default, with the experiment
+   as the receipt.
+
+## Pitch ideas (3 minutes)
+
+**The one-sentence story:** *"A 42-year-old with rectal bleeding gets written off
+as hemorrhoids; Meridian is the agent that makes that miss impossible — it
+books the colonoscopy, drafts the prior auth, and chases the payer, while being
+architecturally incapable of diagnosing anyone."*
+
+Suggested beats (20s problem, 2min live demo, 40s guardrails+evals):
+
+1. **Problem (20s).** Early-onset colorectal cancer is rising 3%/yr; 3 in 4
+   under-50 cases are caught late. 91% five-year survival caught early, 15%
+   caught late. The failure isn't medicine, it's *routing*. Meanwhile prior auth
+   delays kill: 98.5% of pediatric oncology PAs get approved eventually — the
+   denial isn't the harm, the *delay* is.
+2. **Live call (45s).** On `/intake`, place the call. Judges *hear* the agent
+   elicit red flags and book an urgent slot in the same call. Say it out loud:
+   "the referring PCP wrote 'probable hemorrhoids' — the system still routes
+   urgent, and the voice cannot say 'hemorrhoids' back to the patient: the
+   no-diagnosis filter runs inside the synthesizer, fail-closed."
+3. **Referral upload (45s).** Upload the faxed referral. Point at the 🔒 badge:
+   "attacker-controlled fax, parsed in an ephemeral zero-egress Daytona sandbox,
+   destroyed 1.7 seconds later." Show the fired rules on the worklist: "no model
+   decided this — rule `YOUNG_BLEEDING_PLUS_FEATURE`, version-pinned, and a
+   nurse signs before anything books. LLMs extract; rules decide."
+4. **The payer call (20s).** Physician one-click approves the PA packet (every
+   sentence source-linked), then the agent dials the payer IVR — let the room
+   hear two seconds of hold-music purgatory and the touch-tones. It's the joke
+   that lands *and* the realistic workflow.
+5. **The receipts (30s).** Braintrust tab: the live trace tree of the referral
+   they just watched, then the experiment diff — "we didn't pick our extraction
+   model by vibes; flash beat pro on verdict-preservation with zero
+   hallucinated fields, so it's the default. Escalation recall 100%, false
+   reassurance 0, and over-triage reported honestly because that's the error we
+   *chose*."
+6. **Close (10s).** "Every sponsor tool is load-bearing: Daytona is the blast
+   door, Fireworks is perception, the rules are the judgment, humans are the
+   authority, ElevenLabs is the handshake, Braintrust is the proof."
+
+Safeguard sound-bites judges can quote (each is enforced in code, and there's a
+test to point at): urgency is monotonic — the system can raise it, never lower
+it; there is no code path that auto-clears a patient; the voice cannot say a
+condition name; nothing books without a named human's signature; every PA
+sentence without a source does not render.
+
+**Sponsor mapping for the Devpost write-up:**
+
+| Sponsor | Load-bearing job (not decoration) |
+|---|---|
+| Daytona | Ephemeral, `network_block_all` sandbox per referral — untrusted fax/PDF toolchains never run in-process; provenance badged in the UI |
+| Fireworks | Structured extraction (perception only, never judgment); model chosen by measured A/B, sub-second at the flash tier |
+| Braintrust | Traces of every live decision + deterministic-scorer experiments + the model-selection diff |
+| ElevenLabs | Both phone legs of the product — patient intake and payer IVR — with the safety filter enforced at the synthesizer boundary |
+
+**Backup plan:** record a 30-second screen capture of the full demo path in the
+morning; the committed voice cache plays the canonical calls even with no wifi.
 
 ## Why Daytona
 
