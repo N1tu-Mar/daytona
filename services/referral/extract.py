@@ -21,7 +21,7 @@ import httpx
 
 from app.schemas import ReferralFeatures
 
-log = logging.getLogger("scoped.referral.extract")
+log = logging.getLogger("meridian.referral.extract")
 
 FIREWORKS_API_KEY = os.environ.get("FIREWORKS_API_KEY")
 FIREWORKS_MODEL = os.environ.get("FIREWORKS_MODEL", "accounts/fireworks/models/deepseek-v4-pro")

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 
 from sqlalchemy import (
     JSON,
@@ -23,9 +24,15 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
+# Repo-root-anchored default so the DB is the same file no matter which
+# working directory the backend is launched from. A relative "./meridian.db"
+# resolves against the process CWD, which lets a uvicorn --reload restart
+# create a stray empty DB if it fires from the wrong directory.
+_DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "meridian.db"
+
 # Overridable so tests (and any throwaway environment) can point at an
-# isolated DB instead of the demo's scoped.db. See tests/conftest.py.
-DATABASE_URL = os.environ.get("SCOPED_DB_URL", "sqlite:///./scoped.db")
+# isolated DB instead of the demo's meridian.db. See tests/conftest.py.
+DATABASE_URL = os.environ.get("MERIDIAN_DB_URL", f"sqlite:///{_DEFAULT_DB_PATH}")
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
@@ -51,7 +58,7 @@ class ReferralRecord(Base):
     sandbox_id: Mapped[str | None] = mapped_column(String, nullable=True)
     sandbox_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     sandboxed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
-    # Which OS decoded the document: "snapshot:scoped-parse:1", "image:<ref>",
+    # Which OS decoded the document: "snapshot:meridian-parse:1", "image:<ref>",
     # or "declarative-build". Null for synthetic seed data and the local
     # fallback. The auditable "what parsed this", pinnable like rule_version.
     sandbox_source: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -102,7 +109,7 @@ def init_db() -> None:
 def _migrate_referral_sandbox_columns() -> None:
     """Additive, idempotent migration for the sandbox-provenance columns.
 
-    create_all() never ALTERs an existing table, so a scoped.db created before
+    create_all() never ALTERs an existing table, so a meridian.db created before
     these columns existed would be missing them. Add them in place rather than
     forcing a manual DB reset — safe to run on every startup.
     """

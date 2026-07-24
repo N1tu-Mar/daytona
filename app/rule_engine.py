@@ -26,7 +26,7 @@ import yaml
 from app.schemas import ReferralFeatures, RuleMatch, TriageVerdict, Urgency
 from app.urgency import highest_urgency
 
-log = logging.getLogger("scoped.rule_engine")
+log = logging.getLogger("meridian.rule_engine")
 
 RULES_PATH = Path(__file__).parent / "rules.yaml"
 

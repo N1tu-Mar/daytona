@@ -1,4 +1,4 @@
-# Scoped
+# Meridian
 
 An agent that moves a patient from "something's wrong" to a booked colonoscopy with
 prior authorization approved. It never diagnoses — it decides exactly one thing: **does
@@ -23,6 +23,34 @@ The architecture that governs everything: **LLMs extract, rules decide.** Messy 
 becomes structured features via a model; a versioned, unit-tested rule engine — no model
 calls — maps those features to an urgency level. Every verdict records its `rule_version`
 and the exact `rules_fired[]`.
+
+## How a referral flows through the system
+
+Follow the demo case — a faxed referral for a 42-year-old, annotated by the
+referring office as "probable hemorrhoids":
+
+```
+ faxed PDF ──▶ Daytona sandbox ──▶ Fireworks LLM ──▶ rule engine ──▶ nurse worklist
+              (untrusted file      (extracts facts:   (deterministic:   (a human approves
+               opened in an         age 42, bleeding,  YOUNG_BLEEDING_   before anything
+               isolated,            3 weeks, abdominal PLUS_FEATURE      is booked)
+               throwaway VM)        pain — nothing     fires → URGENT)
+                                    more)
+```
+
+1. **Sandbox** — the document is untrusted input, so all decoding/OCR happens in a
+   throwaway Daytona VM with networking blocked. Only plain text comes back. The
+   worklist shows a 🔒 badge with the sandbox ID as proof it ran isolated.
+2. **Extraction** — the LLM's only job is perception: turn text into the structured
+   red-flag features in `app/schemas.py`. It is never asked for an opinion.
+3. **Decision** — `app/rules.yaml` is evaluated deterministically. All matching rules
+   fire, the highest urgency wins, and the full list is stored for the audit trail.
+4. **Human sign-off** — the verdict lands on the nurse worklist. Nothing is booked
+   until a named human approves it.
+
+If **any** step fails — sandbox error, LLM timeout, unparseable document, low
+extraction confidence — the referral routes to `ESCALATE` for human review. There is
+no code path that auto-clears a patient.
 
 ## Layout
 
@@ -50,6 +78,34 @@ Tests: pytest + hypothesis.
 > key is absent (e.g. a referral with no LLM key routes to `ESCALATE` for a
 > human instead of guessing). The seeded synthetic data drives the full UI
 > without any of them.
+
+## API keys (optional — for the live pipeline)
+
+Create a `.env` file in the repo root (it's git-ignored, and the backend loads it
+automatically at startup via `app/env.py` — no `export` needed; real shell
+environment variables always win over `.env` values):
+
+```
+FIREWORKS_API_KEY=...    # live LLM extraction of uploaded referrals + PA prose
+DAYTONA_API_KEY=...      # real sandboxed document parsing (🔒 badge in the worklist)
+ELEVENLABS_API_KEY=...   # voice for intake + payer IVR calls
+BRAINTRUST_API_KEY=...   # uploads eval runs to Braintrust (project "meridian")
+```
+
+What each key unlocks, and what happens without it:
+
+| Key | With it | Without it |
+|---|---|---|
+| Fireworks | Uploaded referral text is extracted into structured features | Upload routes to `ESCALATE` for human review (seeded demo cases still work — they carry known features) |
+| Daytona | Documents are decoded in an isolated sandbox; provenance (`sandbox_id`, duration) is logged and badged | Parsing is refused and the referral escalates — it never falls back to parsing untrusted files in-process |
+| ElevenLabs | Audible voice calls | Text-transcript simulation of the same call flow |
+| Braintrust | `python -m evals.run` also logs experiments remotely | Evals still run and write `data/evals_summary.json` locally |
+
+Tuning knobs (all optional, sane defaults): `FIREWORKS_MODEL` (default
+`accounts/fireworks/models/deepseek-v4-pro`), `FIREWORKS_TIMEOUT_S` (60),
+`FIREWORKS_MAX_TOKENS` (8192 — reasoning models spend tokens thinking before they
+answer), `DAYTONA_SANDBOX_TIMEOUT_S` (60), `DAYTONA_SANDBOX_CREATE_TIMEOUT_S` (180),
+`MERIDIAN_DB_URL` (defaults to SQLite at `./meridian.db`).
 
 ## Running it (step by step)
 
@@ -79,8 +135,9 @@ python3 -m venv .venv                        # first time only
 Leave this terminal running. Verify it's up: open <http://localhost:8000/health>
 in a browser — you should see `{"status":"ok","demo_mode":true}`.
 
-Optional: copy `.env.example` to `.env` and fill in keys **only** if you want
-live LLM extraction / voice / sandboxed parsing. The demo works without it.
+Optional: create a `.env` file with API keys (see [API keys](#api-keys-optional--for-the-live-pipeline)
+above) **only** if you want live LLM extraction / voice / sandboxed parsing. The
+demo works without it.
 
 ### Terminal 2 — frontend
 
@@ -101,6 +158,9 @@ use `npm run dev` instead of `build && start` for hot reload.
   42-year-old "probable hemorrhoids" demo case, each with its urgency, the
   rules that fired, and the source snippet behind every extracted feature.
   Approve/escalate requires typing an actor name (humans sign everything).
+  Referrals parsed in a live Daytona sandbox carry a 🔒 badge; referrals whose
+  pipeline failed show an amber **"not assessed"** badge instead of a
+  misleading urgency (they were never evaluated — a human must look).
 - **`/pa-packets`** — prior-auth packets; every sentence links to its source.
   Physician approve, then submit, then "call" the mock payer IVR.
 - **`/dashboard`** — the eval metrics (escalation recall 100%, false

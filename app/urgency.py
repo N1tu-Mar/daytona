@@ -10,7 +10,7 @@ import logging
 
 from app.schemas import URGENCY_ORDER, Urgency
 
-log = logging.getLogger("scoped.urgency")
+log = logging.getLogger("meridian.urgency")
 
 
 def apply_urgency(current: Urgency, proposed: Urgency) -> Urgency:

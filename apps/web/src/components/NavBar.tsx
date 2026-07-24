@@ -17,7 +17,7 @@ export default function NavBar() {
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
         <Link href="/worklist" className="flex items-baseline gap-2">
           <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-            Scoped
+            Meridian
           </span>
           <span className="hidden text-xs font-medium text-slate-400 sm:inline">
             referral triage, not diagnosis

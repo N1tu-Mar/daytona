@@ -1,4 +1,4 @@
-"""Core Pydantic schemas for Scoped.
+"""Core Pydantic schemas for Meridian.
 
 Every LLM call returns one of these models — no free-form string parsing.
 `TriageVerdict` is append-only: corrections create a new verdict linked to

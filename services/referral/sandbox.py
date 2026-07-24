@@ -33,17 +33,17 @@ import os
 import time
 from dataclasses import dataclass
 
-log = logging.getLogger("scoped.referral.sandbox")
+log = logging.getLogger("meridian.referral.sandbox")
 
 DAYTONA_API_KEY = os.environ.get("DAYTONA_API_KEY")
 
-# Optional: a prebuilt snapshot name (e.g. "scoped-parse:1") published ahead
+# Optional: a prebuilt snapshot name (e.g. "meridian-parse:1") published ahead
 # of time by services/referral/build_snapshot.py. When set we boot straight
 # from it and skip the declarative image build entirely — the "cook once,
 # freeze it, reheat per document" fast path. See DEFAULT_SNAPSHOT_NAME.
 DAYTONA_SANDBOX_SNAPSHOT = os.environ.get("DAYTONA_SANDBOX_SNAPSHOT")
 
-# Optional: a prebuilt image reference (e.g. "my-org/scoped-parse:1"). Like
+# Optional: a prebuilt image reference (e.g. "my-org/meridian-parse:1"). Like
 # the snapshot path but a raw image ref rather than a Daytona snapshot. When
 # neither this nor DAYTONA_SANDBOX_SNAPSHOT is set, we build the parsing OS
 # declaratively (Daytona caches it after the first build).
@@ -53,7 +53,7 @@ DAYTONA_SANDBOX_IMAGE = os.environ.get("DAYTONA_SANDBOX_IMAGE")
 # expects. Bumping the suffix (":2", ":3", ...) when the parsing recipe in
 # _parsing_image() changes gives you a pinnable, auditable "which OS parsed
 # this" version — the same discipline as pinning rule_version to a verdict.
-DEFAULT_SNAPSHOT_NAME = "scoped-parse:1"
+DEFAULT_SNAPSHOT_NAME = "meridian-parse:1"
 
 # Belt-and-suspenders: a hard time-to-live so a box orphaned by a crashed API
 # process self-destructs instead of lingering as cost + attack surface. Our
@@ -121,7 +121,7 @@ class SandboxParseResult:
     sandbox_id: str | None  # None on the unsandboxed local fallback
     duration_ms: int | None
     sandboxed: bool
-    # Which OS actually did the decode: "snapshot:scoped-parse:1",
+    # Which OS actually did the decode: "snapshot:meridian-parse:1",
     # "image:<ref>", or "declarative-build". None on the local fallback (no
     # sandbox OS involved). This is the auditable "what parsed this document".
     sandbox_source: str | None = None

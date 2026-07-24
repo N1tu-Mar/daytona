@@ -1,4 +1,4 @@
-# **CLAUDE.md — Scoped**
+# **CLAUDE.md — Meridian**
 
 > Drop this in the repo root. Claude Code reads it automatically.
 
@@ -14,7 +14,7 @@ You default to boring, auditable, testable designs. You are deeply suspicious of
 
 ## **What we're building**
 
-**Scoped** — an agent that moves a patient from "something's wrong" to a booked colonoscopy with prior authorization approved.
+**Meridian** — an agent that moves a patient from "something's wrong" to a booked colonoscopy with prior authorization approved.
 
 Two entry points:
 

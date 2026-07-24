@@ -1,4 +1,4 @@
-// Thin fetch wrapper around the Scoped FastAPI backend.
+// Thin fetch wrapper around the Meridian FastAPI backend.
 // NEXT_PUBLIC_API_URL must be set (see .env.local.example); defaults to a
 // local backend for dev convenience only.
 

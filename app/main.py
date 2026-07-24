@@ -24,18 +24,18 @@ from app.db import (
 from app.schemas import ReferralFeatures, TriageVerdict
 
 logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("scoped.api")
+log = logging.getLogger("meridian.api")
 
-app = FastAPI(title="Scoped API", description="DEMO — synthetic data. Not for clinical use.")
+app = FastAPI(title="Meridian API", description="DEMO — synthetic data. Not for clinical use.")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "https://scoped.vercel.app",
-        "https://scoped-git-*.vercel.app",
+        "https://meridian.vercel.app",
+        "https://meridian-git-*.vercel.app",
     ],
-    allow_origin_regex=r"https://scoped-git-.*\.vercel\.app",
+    allow_origin_regex=r"https://meridian-git-.*\.vercel\.app",
     allow_methods=["*"],
     allow_headers=["*"],
 )

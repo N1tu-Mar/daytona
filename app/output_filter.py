@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 import re
 
-log = logging.getLogger("scoped.output_filter")
+log = logging.getLogger("meridian.output_filter")
 
 CONDITION_TERMS = [
     "cancer",

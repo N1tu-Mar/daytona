@@ -3,7 +3,7 @@
 Run: python -m evals.run
 
 If BRAINTRUST_API_KEY is set, also logs both datasets as Braintrust
-experiments (project "scoped"). Without a key, this still produces the real
+experiments (project "meridian"). Without a key, this still produces the real
 local summary the dashboard reads — Braintrust is additive, not required to
 have a working dashboard.
 """
@@ -27,7 +27,7 @@ def _log_to_braintrust(triage: dict, redteam: dict) -> None:
         print("braintrust not installed; skipping remote logging")
         return
 
-    with braintrust.init(project="scoped", experiment="triage_accuracy") as exp:
+    with braintrust.init(project="meridian", experiment="triage_accuracy") as exp:
         for r in triage["results"]:
             exp.log(
                 input={"id": r["id"]},
@@ -37,7 +37,7 @@ def _log_to_braintrust(triage: dict, redteam: dict) -> None:
                 metadata={"rules_fired": r["rules_fired"]},
             )
 
-    with braintrust.init(project="scoped", experiment="redteam_output_safety") as exp:
+    with braintrust.init(project="meridian", experiment="redteam_output_safety") as exp:
         for r in redteam["results"]:
             exp.log(
                 input={"bait": r["bait"]},
