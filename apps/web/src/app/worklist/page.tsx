@@ -81,7 +81,11 @@ export default function WorklistPage() {
                       href={`/worklist/${item.referral_id}`}
                       className="font-medium text-slate-900 hover:underline dark:text-slate-100"
                     >
-                      {item.patient_name}
+                      {item.patient_name || (
+                        <span className="italic text-slate-400 dark:text-slate-500">
+                          Unknown patient
+                        </span>
+                      )}
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-slate-500">
@@ -99,7 +103,20 @@ export default function WorklistPage() {
                   </td>
                   <td className="px-4 py-3">
                     {item.verdict ? (
-                      <UrgencyBadge urgency={item.verdict.urgency} />
+                      // A pipeline-failure ESCALATE (no rules fired) has no
+                      // assessed urgency — "routine" is just the floor value.
+                      // Showing ROUTINE would read as false reassurance.
+                      item.verdict.disposition === "ESCALATE" &&
+                      item.verdict.rules_fired.length === 0 ? (
+                        <span
+                          title="Not assessed — parsing/extraction did not complete; needs human review"
+                          className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-amber-800 ring-1 ring-inset ring-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:ring-amber-700"
+                        >
+                          not assessed
+                        </span>
+                      ) : (
+                        <UrgencyBadge urgency={item.verdict.urgency} />
+                      )
                     ) : (
                       <span className="text-slate-400">—</span>
                     )}

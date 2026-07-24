@@ -14,3 +14,4 @@ session*.md
 
 # Local-only working notes — keep local, never push
 *.local.md
+.env.example

@@ -37,11 +37,28 @@ log = logging.getLogger("scoped.referral.sandbox")
 
 DAYTONA_API_KEY = os.environ.get("DAYTONA_API_KEY")
 
-# Optional: a prebuilt image/snapshot reference (e.g. "my-org/scoped-parse:1").
-# When set, we boot straight from it and skip the declarative image build —
-# the fast path once you've published an image. When unset, we build the
-# parsing OS declaratively (Daytona caches it after the first build).
+# Optional: a prebuilt snapshot name (e.g. "scoped-parse:1") published ahead
+# of time by services/referral/build_snapshot.py. When set we boot straight
+# from it and skip the declarative image build entirely — the "cook once,
+# freeze it, reheat per document" fast path. See DEFAULT_SNAPSHOT_NAME.
+DAYTONA_SANDBOX_SNAPSHOT = os.environ.get("DAYTONA_SANDBOX_SNAPSHOT")
+
+# Optional: a prebuilt image reference (e.g. "my-org/scoped-parse:1"). Like
+# the snapshot path but a raw image ref rather than a Daytona snapshot. When
+# neither this nor DAYTONA_SANDBOX_SNAPSHOT is set, we build the parsing OS
+# declaratively (Daytona caches it after the first build).
 DAYTONA_SANDBOX_IMAGE = os.environ.get("DAYTONA_SANDBOX_IMAGE")
+
+# The canonical snapshot name build_snapshot.py publishes and the boot path
+# expects. Bumping the suffix (":2", ":3", ...) when the parsing recipe in
+# _parsing_image() changes gives you a pinnable, auditable "which OS parsed
+# this" version — the same discipline as pinning rule_version to a verdict.
+DEFAULT_SNAPSHOT_NAME = "scoped-parse:1"
+
+# Belt-and-suspenders: a hard time-to-live so a box orphaned by a crashed API
+# process self-destructs instead of lingering as cost + attack surface. Our
+# boxes live seconds; this bound is generous versus create+exec budgets below.
+SANDBOX_TTL_MINUTES = int(os.environ.get("DAYTONA_SANDBOX_TTL_MINUTES", "15"))
 
 # Hard cap on in-sandbox execution. A slow/hung decode raises SandboxError
 # (invariant #3) rather than blocking the request forever.
@@ -104,6 +121,10 @@ class SandboxParseResult:
     sandbox_id: str | None  # None on the unsandboxed local fallback
     duration_ms: int | None
     sandboxed: bool
+    # Which OS actually did the decode: "snapshot:scoped-parse:1",
+    # "image:<ref>", or "declarative-build". None on the local fallback (no
+    # sandbox OS involved). This is the auditable "what parsed this document".
+    sandbox_source: str | None = None
 
 
 def parse_document_in_sandbox(content: bytes, filename: str) -> SandboxParseResult:
@@ -138,6 +159,7 @@ def parse_document_in_sandbox(content: bytes, filename: str) -> SandboxParseResu
     client = Daytona(DaytonaConfig(api_key=DAYTONA_API_KEY))
     sandbox = None
     sandbox_id = "not-created"
+    source_label = _sandbox_source_label()
     outcome = "error"
     text = ""
     duration_ms: int | None = None
@@ -181,14 +203,16 @@ def parse_document_in_sandbox(content: bytes, filename: str) -> SandboxParseResu
         # (so structured log consumers get typed fields).
         duration_ms = int((time.monotonic() - started) * 1000)
         log.info(
-            "sandbox_run  sandbox_id=%s  doc_filename=%s  duration_ms=%d  outcome=%s  destroyed=%s",
+            "sandbox_run  sandbox_id=%s  source=%s  doc_filename=%s  duration_ms=%d  outcome=%s  destroyed=%s",
             sandbox_id,
+            source_label,
             filename,
             duration_ms,
             outcome,
             destroyed,
             extra={
                 "sandbox_id": sandbox_id,
+                "sandbox_source": source_label,
                 "doc_filename": filename,
                 "duration_ms": duration_ms,
                 "outcome": outcome,
@@ -202,24 +226,57 @@ def parse_document_in_sandbox(content: bytes, filename: str) -> SandboxParseResu
         sandbox_id=sandbox_id,
         duration_ms=duration_ms,
         sandboxed=True,
+        sandbox_source=source_label,
     )
+
+
+def _sandbox_source_label() -> str:
+    """A short, auditable string naming which OS the parser booted from —
+    recorded in provenance so a reviewer can tell a prebuilt-snapshot boot
+    from a declarative build. Pure env read; no network, no side effects."""
+    if DAYTONA_SANDBOX_SNAPSHOT:
+        return f"snapshot:{DAYTONA_SANDBOX_SNAPSHOT}"
+    if DAYTONA_SANDBOX_IMAGE:
+        return f"image:{DAYTONA_SANDBOX_IMAGE}"
+    return "declarative-build"
 
 
 def _sandbox_params():
     """Provision the OS the parser runs on: a minimal Debian image with the
     PDF/OCR toolchain baked in, locked down for untrusted input.
 
-    - Network is fully blocked on the running sandbox: a malicious document
-      that achieves code execution still has nowhere to phone home to.
-    - Ephemeral + minimal resources: it exists only for this one decode.
+    Same lockdown on every boot path:
+    - Network fully blocked: a malicious document that achieves code execution
+      still has nowhere to phone home to.
+    - Ephemeral + a hard TTL: it exists only for this one decode, and even a
+      box orphaned by a crashed parent process self-destructs on its own.
+
+    Two boot paths, fastest first:
+    - DAYTONA_SANDBOX_SNAPSHOT set -> boot the prebuilt snapshot instantly.
+      Resources were baked in at snapshot-build time (see build_snapshot.py).
+    - Otherwise -> build the parsing image declaratively (works with zero
+      setup; Daytona caches the build after the first document).
     """
-    from daytona import CreateSandboxFromImageParams, Resources
+    from daytona import (
+        CreateSandboxFromImageParams,
+        CreateSandboxFromSnapshotParams,
+        Resources,
+    )
+
+    if DAYTONA_SANDBOX_SNAPSHOT:
+        return CreateSandboxFromSnapshotParams(
+            snapshot=DAYTONA_SANDBOX_SNAPSHOT,
+            ephemeral=True,
+            network_block_all=True,
+            ttl_minutes=SANDBOX_TTL_MINUTES,
+        )
 
     return CreateSandboxFromImageParams(
         image=DAYTONA_SANDBOX_IMAGE or _parsing_image(),
         resources=Resources(cpu=1, memory=1),
         ephemeral=True,
         network_block_all=True,
+        ttl_minutes=SANDBOX_TTL_MINUTES,
     )
 
 

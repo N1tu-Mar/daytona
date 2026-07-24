@@ -24,9 +24,12 @@ from app.schemas import ReferralFeatures
 log = logging.getLogger("scoped.referral.extract")
 
 FIREWORKS_API_KEY = os.environ.get("FIREWORKS_API_KEY")
-FIREWORKS_MODEL = os.environ.get("FIREWORKS_MODEL", "accounts/fireworks/models/llama-v3p1-70b-instruct")
+FIREWORKS_MODEL = os.environ.get("FIREWORKS_MODEL", "accounts/fireworks/models/deepseek-v4-pro")
 FIREWORKS_URL = "https://api.fireworks.ai/inference/v1/chat/completions"
-TIMEOUT_SECONDS = 15.0
+# Large reasoning models can take >15s to first byte; a timeout still fails
+# safe (ExtractionError -> ESCALATE), this just stops us escalating referrals
+# that a slightly slower-but-correct extraction would have handled.
+TIMEOUT_SECONDS = float(os.environ.get("FIREWORKS_TIMEOUT_S", "60"))
 
 EXTRACTION_FEATURES = [
     "age",
@@ -86,7 +89,10 @@ def extract_features(raw_text: str) -> ReferralFeatures:
         ],
         "response_format": {"type": "json_object"},
         "temperature": 0,
-        "max_tokens": 1024,
+        # Reasoning models (e.g. deepseek) spend tokens on reasoning_content
+        # BEFORE the JSON answer; 1024 truncated the JSON mid-field
+        # (finish_reason=length). This cap covers reasoning + full answer.
+        "max_tokens": int(os.environ.get("FIREWORKS_MAX_TOKENS", "8192")),
     }
     headers = {"Authorization": f"Bearer {FIREWORKS_API_KEY}", "Content-Type": "application/json"}
 
@@ -101,7 +107,12 @@ def extract_features(raw_text: str) -> ReferralFeatures:
     latency = time.monotonic() - start
 
     try:
-        content = resp.json()["choices"][0]["message"]["content"]
+        choice = resp.json()["choices"][0]
+        if choice.get("finish_reason") == "length":
+            # Truncated mid-JSON — parsing would either fail or, worse,
+            # silently drop trailing fields. Fail safe instead.
+            raise ExtractionError("fireworks response truncated (finish_reason=length)")
+        content = (choice["message"]["content"] or "").strip()
         parsed = json.loads(content)
     except (KeyError, IndexError, json.JSONDecodeError) as e:
         raise ExtractionError(f"malformed fireworks response: {e}") from e

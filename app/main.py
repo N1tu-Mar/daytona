@@ -75,6 +75,7 @@ def evals_summary() -> dict:
 
 class IntakeCallRequest(BaseModel):
     patient_answers: dict[str, str]
+    patient_name: str = ""  # caller's name, captured at the top of the call
 
 
 @app.post("/intake/call")
@@ -90,7 +91,7 @@ def intake_call(body: IntakeCallRequest) -> dict:
     from services.intake.call import run_call
 
     referral_id = str(uuid4())
-    result = run_call(referral_id, body.patient_answers)
+    result = run_call(referral_id, body.patient_answers, patient_name=body.patient_name)
     return {
         "referral_id": result.referral_id,
         "transcript": [{"speaker": t.speaker, "text": t.text} for t in result.transcript],
@@ -130,6 +131,7 @@ def _worklist_item(session, ref: ReferralRecord) -> dict:
             "sandbox_id": ref.sandbox_id,
             "duration_ms": ref.sandbox_ms,
             "sandboxed": bool(ref.sandboxed),
+            "sandbox_source": ref.sandbox_source,
         },
         "verdict": None
         if verdict is None

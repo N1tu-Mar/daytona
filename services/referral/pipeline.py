@@ -56,7 +56,7 @@ def process_referral(
 
     # No sandbox provenance yet: if parsing fails before a box runs, these stay
     # empty and no sandbox badge shows for the resulting ESCALATE item.
-    sb: dict = {"sandbox_id": None, "sandbox_ms": None, "sandboxed": False}
+    sb: dict = {"sandbox_id": None, "sandbox_ms": None, "sandboxed": False, "sandbox_source": None}
 
     try:
         parse = parse_document_in_sandbox(content, filename)
@@ -67,7 +67,12 @@ def process_referral(
         return _persist(referral_id, source, "", patient_name, ReferralFeatures(), _escalate_verdict(referral_id, f"unexpected_sandbox_failure: {e}"), **sb)
 
     raw_text = parse.text
-    sb = {"sandbox_id": parse.sandbox_id, "sandbox_ms": parse.duration_ms, "sandboxed": parse.sandboxed}
+    sb = {
+        "sandbox_id": parse.sandbox_id,
+        "sandbox_ms": parse.duration_ms,
+        "sandboxed": parse.sandboxed,
+        "sandbox_source": parse.sandbox_source,
+    }
 
     if not raw_text.strip():
         return _persist(referral_id, source, raw_text, patient_name, ReferralFeatures(), _escalate_verdict(referral_id, "document_unparseable_empty_text"), **sb)
@@ -105,6 +110,7 @@ def _persist(
     sandbox_id: str | None = None,
     sandbox_ms: int | None = None,
     sandboxed: bool = False,
+    sandbox_source: str | None = None,
 ) -> tuple[ReferralRecord, TriageVerdict]:
     session = get_session()
     try:
@@ -117,6 +123,7 @@ def _persist(
             sandbox_id=sandbox_id,
             sandbox_ms=sandbox_ms,
             sandboxed=sandboxed,
+            sandbox_source=sandbox_source,
         )
         session.add(record)
         session.add(
