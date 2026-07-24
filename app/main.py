@@ -44,6 +44,10 @@ app.add_middleware(
 @app.on_event("startup")
 def _startup() -> None:
     init_db()
+    # Braintrust tracing of live referral/intake decisions; no-op without a key.
+    from app.tracing import init_tracing
+
+    init_tracing()
 
 
 @app.get("/health")

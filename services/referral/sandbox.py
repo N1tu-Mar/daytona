@@ -33,6 +33,8 @@ import os
 import time
 from dataclasses import dataclass
 
+from app.tracing import log_span, traced
+
 log = logging.getLogger("meridian.referral.sandbox")
 
 DAYTONA_API_KEY = os.environ.get("DAYTONA_API_KEY")
@@ -127,6 +129,7 @@ class SandboxParseResult:
     sandbox_source: str | None = None
 
 
+@traced
 def parse_document_in_sandbox(content: bytes, filename: str) -> SandboxParseResult:
     """Decode/OCR ``content`` inside a Daytona sandbox and return the text
     plus its sandbox provenance.
@@ -221,6 +224,15 @@ def parse_document_in_sandbox(content: bytes, filename: str) -> SandboxParseResu
         )
 
     # Reached only on success — any error above propagates out of the finally.
+    log_span(
+        metadata={
+            "sandbox_id": sandbox_id,
+            "sandbox_source": source_label,
+            "duration_ms": duration_ms,
+            "network_block_all": True,
+            "ephemeral": True,
+        }
+    )
     return SandboxParseResult(
         text=text,
         sandbox_id=sandbox_id,

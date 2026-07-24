@@ -20,11 +20,17 @@ import time
 import httpx
 
 from app.schemas import ReferralFeatures
+from app.tracing import log_span, traced
 
 log = logging.getLogger("meridian.referral.extract")
 
 FIREWORKS_API_KEY = os.environ.get("FIREWORKS_API_KEY")
-FIREWORKS_MODEL = os.environ.get("FIREWORKS_MODEL", "accounts/fireworks/models/deepseek-v4-pro")
+# Default chosen empirically — evals/extraction_ab.py diffs candidate models
+# in Braintrust on the synthetic referral set. deepseek-v4-flash beat
+# deepseek-v4-pro on verdict_preserved (0.69 vs 0.60) at ~16x lower latency
+# (1.3s vs 21s/referral) with identical 100% extraction_escalation_safety,
+# and pro's long reasoning traces caused timeouts. Fast AND safer-in-practice.
+FIREWORKS_MODEL = os.environ.get("FIREWORKS_MODEL", "accounts/fireworks/models/deepseek-v4-flash")
 FIREWORKS_URL = "https://api.fireworks.ai/inference/v1/chat/completions"
 # Large reasoning models can take >15s to first byte; a timeout still fails
 # safe (ExtractionError -> ESCALATE), this just stops us escalating referrals
@@ -70,7 +76,11 @@ class ExtractionError(Exception):
     Callers must treat this as ESCALATE, never fall back to a guess."""
 
 
-def extract_features(raw_text: str) -> ReferralFeatures:
+@traced
+def extract_features(raw_text: str, model: str | None = None) -> ReferralFeatures:
+    """`model` overrides FIREWORKS_MODEL for one call — used by the
+    extraction A/B eval (evals/extraction_ab.py) to compare models on the
+    same dataset; production callers leave it None."""
     if not raw_text or not raw_text.strip():
         raise ExtractionError("empty referral text")
 
@@ -82,7 +92,7 @@ def extract_features(raw_text: str) -> ReferralFeatures:
         )
 
     payload = {
-        "model": FIREWORKS_MODEL,
+        "model": model or FIREWORKS_MODEL,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": raw_text},
@@ -125,5 +135,13 @@ def extract_features(raw_text: str) -> ReferralFeatures:
     log.info(
         "extraction_complete",
         extra={"latency_s": round(latency, 2), "fields_populated": len(features.source_refs)},
+    )
+    log_span(
+        metadata={
+            "model": model or FIREWORKS_MODEL,
+            "latency_s": round(latency, 2),
+            "fields_populated": len(features.source_refs),
+            "usage": resp.json().get("usage"),
+        }
     )
     return features

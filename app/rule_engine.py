@@ -24,6 +24,7 @@ from typing import Any
 import yaml
 
 from app.schemas import ReferralFeatures, RuleMatch, TriageVerdict, Urgency
+from app.tracing import log_span, traced
 from app.urgency import highest_urgency
 
 log = logging.getLogger("meridian.rule_engine")
@@ -71,6 +72,7 @@ def _feature_dict(features: ReferralFeatures) -> dict[str, Any]:
     return data
 
 
+@traced
 def evaluate(
     features: ReferralFeatures,
     referral_id: str,
@@ -83,7 +85,12 @@ def evaluate(
     """
     try:
         cfg = config or load_rules()
-        return _evaluate_unsafe(features, referral_id, cfg)
+        verdict = _evaluate_unsafe(features, referral_id, cfg)
+        log_span(
+            output={"urgency": verdict.urgency, "disposition": verdict.disposition},
+            metadata={"rules_fired": verdict.rules_fired, "rule_version": verdict.rule_version},
+        )
+        return verdict
     except Exception:
         log.exception("rule_engine_failure", extra={"referral_id": referral_id})
         return TriageVerdict(

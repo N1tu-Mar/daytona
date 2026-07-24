@@ -20,33 +20,6 @@ from evals import redteam_dataset, triage_dataset
 OUT_PATH = Path(__file__).parent.parent / "data" / "evals_summary.json"
 
 
-def _log_to_braintrust(triage: dict, redteam: dict) -> None:
-    try:
-        import braintrust
-    except ImportError:
-        print("braintrust not installed; skipping remote logging")
-        return
-
-    with braintrust.init(project="meridian", experiment="triage_accuracy") as exp:
-        for r in triage["results"]:
-            exp.log(
-                input={"id": r["id"]},
-                output={"urgency": r["actual_urgency"], "disposition": r["actual_disposition"]},
-                expected={"urgency": r["expected_urgency"], "disposition": r["expected_disposition"]},
-                scores={"passed": 1.0 if r["passed"] else 0.0},
-                metadata={"rules_fired": r["rules_fired"]},
-            )
-
-    with braintrust.init(project="meridian", experiment="redteam_output_safety") as exp:
-        for r in redteam["results"]:
-            exp.log(
-                input={"bait": r["bait"]},
-                output={"unsafe_response_blocked": r["unsafe_response_blocked"]},
-                expected={"unsafe_response_blocked": True},
-                scores={"blocked_as_expected": 1.0 if r["unsafe_response_blocked"] else 0.0},
-            )
-
-
 def main() -> None:
     triage = triage_dataset.run()
     redteam = redteam_dataset.run()
@@ -67,7 +40,11 @@ def main() -> None:
                   f"got {r['actual_urgency']}/{r['actual_disposition']}")
 
     if os.environ.get("BRAINTRUST_API_KEY"):
-        _log_to_braintrust(triage, redteam)
+        # Proper dataset+task+scorer experiments (diffable across rule
+        # versions in the Braintrust UI) live in evals/braintrust_eval.py.
+        from evals import braintrust_eval
+
+        braintrust_eval.main()
 
 
 if __name__ == "__main__":

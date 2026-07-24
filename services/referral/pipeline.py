@@ -21,6 +21,7 @@ from uuid import uuid4
 from app.db import ReferralRecord, TriageVerdictRecord, get_session
 from app.rule_engine import evaluate, load_rules
 from app.schemas import ReferralFeatures, TriageVerdict
+from app.tracing import log_span, traced
 from services.referral.extract import ExtractionError, extract_features
 from services.referral.sandbox import SandboxError, parse_document_in_sandbox
 
@@ -29,6 +30,7 @@ log = logging.getLogger("meridian.referral.pipeline")
 
 def _escalate_verdict(referral_id: str, reason: str) -> TriageVerdict:
     log.warning("referral_pipeline_escalated", extra={"referral_id": referral_id, "reason": reason})
+    log_span(metadata={"escalate_reason": reason})
     return TriageVerdict(
         referral_id=referral_id,
         urgency="routine",
@@ -40,6 +42,7 @@ def _escalate_verdict(referral_id: str, reason: str) -> TriageVerdict:
     )
 
 
+@traced
 def process_referral(
     content: bytes,
     filename: str,
@@ -51,8 +54,13 @@ def process_referral(
     Never raises: any failure anywhere in the pipeline results in a
     persisted ESCALATE verdict, because a human must always be able to find
     this referral on the worklist even when automation broke.
+
+    Traced end-to-end in Braintrust when configured: the root span carries
+    the verdict, with nested spans for sandbox parse, extraction, and rule
+    evaluation — every production decision is replayable.
     """
     referral_id = str(uuid4())
+    log_span(input={"doc_filename": filename, "bytes": len(content), "source": source})
 
     # No sandbox provenance yet: if parsing fails before a box runs, these stay
     # empty and no sandbox badge shows for the resulting ESCALATE item.
@@ -94,6 +102,10 @@ def process_referral(
         log.exception("unexpected_rule_engine_failure")
         return _persist(referral_id, source, raw_text, patient_name, features, _escalate_verdict(referral_id, f"unexpected_rule_engine_failure: {e}"), **sb)
 
+    log_span(
+        output={"urgency": verdict.urgency, "disposition": verdict.disposition},
+        metadata={"rules_fired": verdict.rules_fired, "rule_version": verdict.rule_version, **sb},
+    )
     return _persist(referral_id, source, raw_text, patient_name, features, verdict, **sb)
 
 

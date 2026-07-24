@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from app.db import ReferralRecord, TriageVerdictRecord, get_session
 from app.output_filter import send_patient_message
 from app.rule_engine import evaluate
+from app.tracing import log_span, traced
 from app.schemas import ReferralFeatures
 from services.intake.booking import book_slot
 from services.intake.parser import parse_choice, parse_number, parse_yes_no
@@ -54,6 +55,7 @@ def _by_field(field_name: str):
     return next(q for q in QUESTION_SCRIPT if q.field == field_name)
 
 
+@traced
 def run_call(referral_id: str, patient_answers: dict[str, str], patient_name: str = "") -> CallResult:
     """Runs the fixed-order script against a map of field -> patient answer
     text (this is the seam a live ElevenLabs webhook would fill in turn by
@@ -138,6 +140,11 @@ def run_call(referral_id: str, patient_answers: dict[str, str], patient_name: st
 
     _persist(referral_id, features, verdict, booked_slot, patient_name)
 
+    log_span(
+        input={"referral_id": referral_id, "answers": patient_answers},
+        output={"urgency": verdict.urgency, "disposition": verdict.disposition, "booked_slot": booked_slot},
+        metadata={"rules_fired": verdict.rules_fired, "low_confidence": low_confidence},
+    )
     return CallResult(
         referral_id=referral_id,
         transcript=transcript,
