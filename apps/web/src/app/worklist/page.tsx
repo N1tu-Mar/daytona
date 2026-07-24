@@ -84,7 +84,19 @@ export default function WorklistPage() {
                       {item.patient_name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-slate-500">{item.source}</td>
+                  <td className="px-4 py-3 text-slate-500">
+                    <span className="inline-flex items-center gap-1.5">
+                      {item.source}
+                      {item.sandbox?.sandboxed && (
+                        <span
+                          title={`Decoded in Daytona sandbox ${item.sandbox.sandbox_id ?? ""}`}
+                          className="text-emerald-600 dark:text-emerald-400"
+                        >
+                          🔒
+                        </span>
+                      )}
+                    </span>
+                  </td>
                   <td className="px-4 py-3">
                     {item.verdict ? (
                       <UrgencyBadge urgency={item.verdict.urgency} />

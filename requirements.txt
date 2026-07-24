@@ -7,6 +7,7 @@ python-multipart>=0.0.9
 httpx>=0.27
 braintrust>=0.0.150
 pypdf>=4.2
+daytona>=0.200.1,<0.201  # sandboxed referral parsing; import is `from daytona import ...`
 
 pytest>=8.2
 hypothesis>=6.100

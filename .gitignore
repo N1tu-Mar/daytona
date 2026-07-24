@@ -8,3 +8,9 @@ node_modules/
 .env
 .env.local
 .vercel/
+
+# Exported conversation transcripts — keep local, never push
+session*.md
+
+# Local-only working notes — keep local, never push
+*.local.md

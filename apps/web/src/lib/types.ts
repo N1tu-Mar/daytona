@@ -36,6 +36,12 @@ export interface TriageVerdict {
   booked_slot: string | null;
 }
 
+export interface SandboxInfo {
+  sandbox_id: string | null;
+  duration_ms: number | null;
+  sandboxed: boolean;
+}
+
 export interface ReferralWorklistItem {
   referral_id: string;
   patient_name: string;
@@ -43,6 +49,7 @@ export interface ReferralWorklistItem {
   raw_text: string;
   created_at: string;
   features: ReferralFeatures;
+  sandbox: SandboxInfo;
   verdict: TriageVerdict | null;
 }
 
