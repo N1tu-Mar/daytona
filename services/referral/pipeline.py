@@ -24,7 +24,7 @@ from app.schemas import ReferralFeatures, TriageVerdict
 from services.referral.extract import ExtractionError, extract_features
 from services.referral.sandbox import SandboxError, parse_document_in_sandbox
 
-log = logging.getLogger("scoped.referral.pipeline")
+log = logging.getLogger("meridian.referral.pipeline")
 
 
 def _escalate_verdict(referral_id: str, reason: str) -> TriageVerdict:

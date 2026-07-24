@@ -1,4 +1,4 @@
-# Scoped — web frontend
+# Meridian — web frontend
 
 This is the Next.js dashboard (nurse worklist, PA approval, metrics). It is
 **only the frontend**. It talks over HTTP to a separate Python/FastAPI
@@ -24,7 +24,7 @@ controls the frontend; the backend is Python and is never launched by npm.
 # first time only
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt   # backend deps live in requirements.txt
-.venv/bin/python -m app.seed                # load synthetic referrals into scoped.db
+.venv/bin/python -m app.seed                # load synthetic referrals into meridian.db
 
 # every time
 .venv/bin/python -m app.main                # API on http://localhost:8000 — leave running

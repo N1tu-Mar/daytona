@@ -21,7 +21,7 @@ from dataclasses import dataclass
 
 from services.ivr.mock_ivr import IVRSession
 
-log = logging.getLogger("scoped.ivr.agent")
+log = logging.getLogger("meridian.ivr.agent")
 
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
 

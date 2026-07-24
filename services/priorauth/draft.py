@@ -20,7 +20,7 @@ import httpx
 from app.output_filter import check_output
 from app.schemas import PASentence, ReferralFeatures, TriageVerdict
 
-log = logging.getLogger("scoped.priorauth.draft")
+log = logging.getLogger("meridian.priorauth.draft")
 
 FIREWORKS_API_KEY = os.environ.get("FIREWORKS_API_KEY")
 FIREWORKS_MODEL = os.environ.get("FIREWORKS_MODEL", "accounts/fireworks/models/llama-v3p1-70b-instruct")

@@ -41,7 +41,7 @@ export function SandboxBadge({ sandbox }: { sandbox: SandboxInfo | null | undefi
   if (!sandbox?.sandboxed) return null;
   const secs =
     sandbox.duration_ms != null ? `${(sandbox.duration_ms / 1000).toFixed(1)}s` : null;
-  // "snapshot:scoped-parse:1" -> "snapshot", "declarative-build" -> "build".
+  // "snapshot:meridian-parse:1" -> "snapshot", "declarative-build" -> "build".
   // The prefix is the audit-worthy bit (which OS parsed this); the full label
   // lives in the tooltip. Null on older rows — then we just omit it.
   const source = sandbox.sandbox_source;

@@ -10,7 +10,7 @@ instantly instead of rebuilding the image on every document.
 When it prints "published", point the pipeline at the snapshot so boots skip
 the declarative build entirely:
 
-    export DAYTONA_SANDBOX_SNAPSHOT=scoped-parse:1
+    export DAYTONA_SANDBOX_SNAPSHOT=meridian-parse:1
 
 Recipe analogy: sandbox.py's _parsing_image() is the recipe card; this script
 cooks it once and freezes the finished meal under a name; the pipeline then

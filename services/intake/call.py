@@ -27,7 +27,7 @@ from services.intake.booking import book_slot
 from services.intake.parser import parse_choice, parse_number, parse_yes_no
 from services.intake.questions import QUESTION_SCRIPT, ordered_top_level_questions
 
-log = logging.getLogger("scoped.intake.call")
+log = logging.getLogger("meridian.intake.call")
 
 FALLBACK_LINE = "I'm not able to get a clear answer on that. A nurse will call you back to finish getting you scheduled."
 LOW_CONFIDENCE_THRESHOLD = 0.5

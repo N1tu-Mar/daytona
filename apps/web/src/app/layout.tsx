@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Scoped — nurse worklist",
+  title: "Meridian — nurse worklist",
   description: "DEMO — synthetic data. Not for clinical use.",
 };
 
@@ -38,7 +38,7 @@ export default function RootLayout({
             {children}
           </main>
           <footer className="mx-auto w-full max-w-6xl px-4 py-6 text-xs text-slate-400 sm:px-6">
-            Scoped — routes referrals to the right urgency of GI appointment. It does not diagnose.
+            Meridian — routes referrals to the right urgency of GI appointment. It does not diagnose.
           </footer>
         </Providers>
       </body>
