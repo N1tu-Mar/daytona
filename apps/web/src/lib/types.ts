@@ -86,6 +86,29 @@ export interface PaPacket {
   days_saved: number | null;
 }
 
+export interface VoicedTurn {
+  speaker: "agent" | "patient" | "ivr" | "caller" | "system";
+  text: string;
+  audio_b64: string | null;
+  mime: string | null;
+}
+
+export interface IntakeCallResponse {
+  referral_id: string;
+  transcript: VoicedTurn[];
+  urgency: Urgency;
+  disposition: Disposition;
+  booked_slot: string | null;
+  final_message: string;
+}
+
+export interface IvrCallResponse {
+  status: string;
+  days_saved: number;
+  transcript: string[];
+  voiced_transcript?: VoicedTurn[];
+}
+
 export interface EvalsSummary {
   generated_at: string;
   triage: {

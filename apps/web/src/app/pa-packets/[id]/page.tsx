@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { ApiError, get, post } from "@/lib/api";
-import type { PaPacket } from "@/lib/types";
+import type { IvrCallResponse, PaPacket } from "@/lib/types";
+import CallPlayback from "@/components/CallPlayback";
 
 export default function PaPacketDetailPage() {
   const params = useParams<{ id: string }>();
@@ -14,6 +15,7 @@ export default function PaPacketDetailPage() {
   const [actor, setActor] = useState("");
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [ivrResult, setIvrResult] = useState<IvrCallResponse | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,6 +86,43 @@ export default function PaPacketDetailPage() {
           : err instanceof Error
           ? err.message
           : "Submission failed."
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleCallIvr() {
+    setBusy(true);
+    setActionError(null);
+    try {
+      const res = await post<IvrCallResponse>(
+        `/pa-packets/${packetId}/call-ivr?voice=true`,
+        {}
+      );
+      setIvrResult(res);
+      setPacket((prev) =>
+        prev
+          ? {
+              ...prev,
+              payer_status: res.status,
+              days_saved: res.days_saved,
+              status:
+                res.status === "approved"
+                  ? "approved_by_payer"
+                  : res.status === "denied"
+                  ? "denied"
+                  : prev.status,
+            }
+          : prev
+      );
+    } catch (err) {
+      setActionError(
+        err instanceof ApiError && err.status === 409
+          ? "Packet must be submitted before checking payer status."
+          : err instanceof Error
+          ? err.message
+          : "IVR call failed."
       );
     } finally {
       setBusy(false);
@@ -207,8 +246,32 @@ export default function PaPacketDetailPage() {
               >
                 {packet.status === "submitted" ? "Submitted" : busy ? "Submitting…" : "Submit"}
               </button>
+              <button
+                onClick={handleCallIvr}
+                disabled={
+                  busy || (packet.status !== "submitted" && packet.payer_status === null)
+                }
+                className="rounded-md bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+                title="Agent dials the payer's phone tree and retrieves the authorization status"
+              >
+                {busy ? "On hold with the payer…" : "📞 Call payer IVR"}
+              </button>
             </div>
           </div>
+
+          {ivrResult?.voiced_transcript && (
+            <div className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+              <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                The payer call
+              </h2>
+              <p className="mb-3 text-xs text-slate-400">
+                Agent navigates the phone tree with keypad tones; status:{" "}
+                <span className="font-semibold">{ivrResult.status}</span>
+                {" · "}~{ivrResult.days_saved} days of status-chasing saved
+              </p>
+              <CallPlayback turns={ivrResult.voiced_transcript} />
+            </div>
+          )}
         </div>
       )}
     </div>

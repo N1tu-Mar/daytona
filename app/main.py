@@ -76,6 +76,7 @@ def evals_summary() -> dict:
 class IntakeCallRequest(BaseModel):
     patient_answers: dict[str, str]
     patient_name: str = ""  # caller's name, captured at the top of the call
+    voice: bool = False  # synthesize ElevenLabs audio for each transcript turn
 
 
 @app.post("/intake/call")
@@ -85,6 +86,11 @@ def intake_call(body: IntakeCallRequest) -> dict:
     `patient_answers` maps question field name -> the caller's answer text.
     This is the seam an ElevenLabs webhook fills in turn-by-turn in
     production; for the demo it's supplied up front to simulate a full call.
+
+    With `voice=true`, each transcript turn also carries synthesized audio
+    (agent lines pass the output filter again inside the synthesizer). Audio
+    failures degrade individual turns to text — the call result itself never
+    depends on TTS.
     """
     from uuid import uuid4
 
@@ -92,9 +98,14 @@ def intake_call(body: IntakeCallRequest) -> dict:
 
     referral_id = str(uuid4())
     result = run_call(referral_id, body.patient_answers, patient_name=body.patient_name)
+    turns = [{"speaker": t.speaker, "text": t.text} for t in result.transcript]
+    if body.voice:
+        from services.voice.calls import voice_intake_turns
+
+        turns = voice_intake_turns(turns)
     return {
         "referral_id": result.referral_id,
-        "transcript": [{"speaker": t.speaker, "text": t.text} for t in result.transcript],
+        "transcript": turns,
         "urgency": result.urgency,
         "disposition": result.disposition,
         "booked_slot": result.booked_slot,
@@ -423,11 +434,15 @@ def submit_pa_packet(packet_id: str) -> dict:
 
 
 @app.post("/pa-packets/{packet_id}/call-ivr")
-def call_ivr(packet_id: str) -> dict:
+def call_ivr(packet_id: str, voice: bool = False) -> dict:
     """Dials the mock payer IVR, navigates it, and records the result.
 
     Only callable once a packet has been submitted — chasing status on
-    something never sent to the payer doesn't make sense."""
+    something never sent to the payer doesn't make sense.
+
+    With `voice=true`, the response also carries the call as playable audio:
+    the payer IVR's synthesized voice plus real DTMF touch-tones for the
+    agent's keypresses. The status result never depends on audio."""
     from services.ivr.agent import call_payer_ivr
 
     session = get_session()
@@ -446,11 +461,16 @@ def call_ivr(packet_id: str) -> dict:
         elif result.status == "denied":
             pkt.status = "denied"
         session.commit()
-        return {
+        response = {
             "status": result.status,
             "days_saved": result.days_saved,
             "transcript": result.transcript,
         }
+        if voice:
+            from services.voice.calls import voice_ivr_transcript
+
+            response["voiced_transcript"] = voice_ivr_transcript(result.transcript)
+        return response
     finally:
         session.close()
 
