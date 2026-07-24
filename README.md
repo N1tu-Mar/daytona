@@ -329,10 +329,14 @@ architecturally incapable of diagnosing anyone."*
 Suggested beats (20s problem, 2min live demo, 40s guardrails+evals):
 
 1. **Problem (20s).** Early-onset colorectal cancer is rising 3%/yr; 3 in 4
-   under-50 cases are caught late. 91% five-year survival caught early, 15%
-   caught late. The failure isn't medicine, it's *routing*. Meanwhile prior auth
-   delays kill: 98.5% of pediatric oncology PAs get approved eventually — the
-   denial isn't the harm, the *delay* is.
+   under-50 cases are caught late. 91% five-year survival caught early, 17%
+   caught late (SEER 2016–2022). The failure isn't medicine, it's *routing*:
+   average GI wait is 40 days — the longest of any specialty — and at one
+   large health system only 34.8% of referral scheduling attempts became
+   completed visits. Prior auth delays kill: 98.5% of pediatric oncology PAs
+   get approved eventually — the denial isn't the harm, the *delay* is.
+   **Every number the pitch uses is verified with a primary source in
+   [docs/FACTS.md](docs/FACTS.md) — quote phrasings from there verbatim.**
 2. **Live call (45s).** On `/intake`, place the call. Judges *hear* the agent
    elicit red flags and book an urgent slot in the same call. Say it out loud:
    "the referring PCP wrote 'probable hemorrhoids' — the system still routes

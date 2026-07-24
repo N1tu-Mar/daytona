@@ -23,18 +23,19 @@ const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
 ];
 
+// Every number here is verified against its primary source — see docs/FACTS.md.
 const PROBLEM_STATS = [
   {
-    value: "91% → 15%",
-    label: "five-year survival for colorectal cancer, caught early versus late",
+    value: "91% → 17%",
+    label: "five-year survival for colorectal cancer, caught early versus late (SEER, 2016–2022)",
   },
   {
-    value: "3 in 4",
-    label: "cases in under-50s are found at an advanced stage",
+    value: "40 days",
+    label: "average wait for a GI appointment — the longest of any specialty surveyed (AMN 2025)",
   },
   {
-    value: "98.5%",
-    label: "of pediatric oncology prior auths are approved anyway — the harm is the delay",
+    value: "34.8%",
+    label: "of 103,737 specialty-referral scheduling attempts at a large US health system became documented completed visits",
   },
 ];
 
@@ -178,13 +179,14 @@ export default function Home() {
             The failure isn&apos;t medicine. <em>It&apos;s routing.</em>
           </h2>
           <p className="mt-6 max-w-2xl leading-relaxed text-slate-400">
-            Early-onset colorectal cancer has risen every year for a decade,
-            and the most common miss is mundane: a young patient&apos;s
-            bleeding gets written off, the referral sits in a fax queue, the
-            prior auth adds weeks. Nine in ten physicians say prior
-            authorization delays care. None of that needs a smarter doctor —
-            it needs the right people to get scoped, in the right order,
-            faster.
+            Colorectal cancer in adults under 50 is rising 3% a year, and 3 in
+            4 of those cases are found at an advanced stage. The miss is
+            mundane: a young patient&apos;s bleeding gets written off, the
+            referral sits in a fax queue, the prior auth adds weeks — 95% of
+            physicians say prior authorization delays care, and a four-week
+            treatment delay carries a 6–13% higher risk of death. None of that
+            needs a smarter doctor — it needs the right people to get scoped,
+            in the right order, faster.
           </p>
           <dl className="mt-14 grid gap-px overflow-hidden rounded-lg bg-white/10 sm:grid-cols-3">
             {PROBLEM_STATS.map((s) => (
